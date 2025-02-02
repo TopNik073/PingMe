@@ -1,8 +1,9 @@
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.ext.asyncio import AsyncAttrs
 from datetime import datetime, timezone
 
 
-class BaseModel(DeclarativeBase):
+class BaseModel(AsyncAttrs, DeclarativeBase):
     """Base class for inheritance new models"""
 
     repr_cols_num = 1
