@@ -6,7 +6,7 @@ from sqlalchemy.schema import UniqueConstraint
 import uuid
 from datetime import datetime
 
-from models.BaseModel import BaseModel, get_datetime_UTC
+from src.infrastructure.database.models.BaseModel import BaseModel, get_datetime_UTC
 
 
 class Contacts(BaseModel):
@@ -33,4 +33,4 @@ class Contacts(BaseModel):
         UniqueConstraint('user_id', 'contact_id', name='uq_user_contact'),
     )
 
-from models.users import Users
+from src.infrastructure.database.models.users import Users

@@ -4,9 +4,9 @@ from sqlalchemy.dialects.postgresql import UUID
 
 from datetime import datetime
 
-from models.BaseModel import BaseModel, get_datetime_UTC
+from src.infrastructure.database.models.BaseModel import BaseModel, get_datetime_UTC
 
-from enums.Roles import Roles
+from src.infrastructure.database.enums.Roles import Roles
 
 
 class UserConversation(BaseModel):
@@ -47,6 +47,6 @@ class UserConversation(BaseModel):
         Index('ix_user_conversation_user_id', 'user_id'),
     )
 
-from models.users import Users
-from models.conversations import Conversations
-from models.messages import Messages
+from src.infrastructure.database.models.users import Users
+from src.infrastructure.database.models.conversations import Conversations
+from src.infrastructure.database.models.messages import Messages

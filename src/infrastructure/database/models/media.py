@@ -5,7 +5,7 @@ from sqlalchemy import ForeignKey
 import uuid
 from datetime import datetime
 
-from models.BaseModel import BaseModel, get_datetime_UTC
+from src.infrastructure.database.models.BaseModel import BaseModel, get_datetime_UTC
 
 
 class Media(BaseModel):
@@ -34,5 +34,5 @@ class Media(BaseModel):
         default=get_datetime_UTC, onupdate=get_datetime_UTC
     )
 
-from models.messages import Messages
-from models.stories import Stories
+from src.infrastructure.database.models.messages import Messages
+from src.infrastructure.database.models.stories import Stories

@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID, TEXT
 import uuid
 from datetime import datetime
 
-from models.BaseModel import BaseModel, get_datetime_UTC
+from src.infrastructure.database.models.BaseModel import BaseModel, get_datetime_UTC
 
 class Messages(BaseModel):
     __tablename__ = "messages"
@@ -53,7 +53,7 @@ class Messages(BaseModel):
         ),
     )
 
-from models.users import Users
-from models.conversations import Conversations
-from models.user_conversation import UserConversation
-from models.media import Media
+from src.infrastructure.database.models.users import Users
+from src.infrastructure.database.models.conversations import Conversations
+from src.infrastructure.database.models.user_conversation import UserConversation
+from src.infrastructure.database.models.media import Media

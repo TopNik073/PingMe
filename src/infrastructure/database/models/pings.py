@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime
 
-from models.BaseModel import BaseModel, get_datetime_UTC
+from src.infrastructure.database.models.BaseModel import BaseModel, get_datetime_UTC
 
 
 class Pings(BaseModel):
@@ -25,4 +25,4 @@ class Pings(BaseModel):
 
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=get_datetime_UTC)
 
-from models.users import Users
+from src.infrastructure.database.models.users import Users

@@ -2,11 +2,12 @@ from typing import List
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import Enum
+
 import uuid
 from datetime import datetime
 
-from models.BaseModel import BaseModel, get_datetime_UTC
-from enums.AuthProviders import AuthProvidersEnum
+from src.infrastructure.database.models.BaseModel import BaseModel, get_datetime_UTC
+from src.infrastructure.database.enums.AuthProviders import AuthProvidersEnum
 
 class Users(BaseModel):
     __tablename__ = "users"
@@ -46,8 +47,8 @@ class Users(BaseModel):
     )
 
 from models.messages import Messages
-from models.pings import Pings
-from models.user_conversation import UserConversation
-from models.stories import Stories
-from models.tokens import Tokens
-from models.contacts import Contacts
+from src.infrastructure.database.models.pings import Pings
+from src.infrastructure.database.models.user_conversation import UserConversation
+from src.infrastructure.database.models.stories import Stories
+from src.infrastructure.database.models.tokens import Tokens
+from src.infrastructure.database.models.contacts import Contacts

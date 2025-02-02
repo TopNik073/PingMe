@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime
 
-from models.BaseModel import BaseModel, get_datetime_UTC
+from src.infrastructure.database.models.BaseModel import BaseModel, get_datetime_UTC
 
 
 class Stories(BaseModel):
@@ -24,5 +24,5 @@ class Stories(BaseModel):
         default=get_datetime_UTC, onupdate=get_datetime_UTC
     )
 
-from models.users import Users
-from models.media import Media
+from src.infrastructure.database.models.users import Users
+from src.infrastructure.database.models.media import Media

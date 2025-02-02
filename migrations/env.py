@@ -6,16 +6,16 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from models.BaseModel import BaseModel
-from models.users import Users
-from models.user_conversation import UserConversation
-from models.conversations import Conversations
-from models.messages import Messages
-from models.media import Media
-from models.contacts import Contacts
-from models.stories import Stories
-from models.pings import Pings
-from models.tokens import Tokens
+from src.infrastructure.database.models.BaseModel import BaseModel
+from src.infrastructure.database.models.users import Users
+from src.infrastructure.database.models.user_conversation import UserConversation
+from src.infrastructure.database.models.conversations import Conversations
+from src.infrastructure.database.models.messages import Messages
+from src.infrastructure.database.models.media import Media
+from src.infrastructure.database.models.contacts import Contacts
+from src.infrastructure.database.models.stories import Stories
+from src.infrastructure.database.models.pings import Pings
+from src.infrastructure.database.models.tokens import Tokens
 
 from dotenv import load_dotenv
 

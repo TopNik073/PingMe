@@ -6,8 +6,8 @@ from sqlalchemy import Enum
 import uuid
 from datetime import datetime
 
-from models.BaseModel import BaseModel, get_datetime_UTC
-from enums.ConversationType import ConversationType
+from src.infrastructure.database.models.BaseModel import BaseModel, get_datetime_UTC
+from src.infrastructure.database.enums.ConversationType import ConversationType
 
 
 class Conversations(BaseModel):
@@ -35,5 +35,5 @@ class Conversations(BaseModel):
     is_deleted: Mapped[bool] = mapped_column(nullable=False, default=False)
     deleted_at: Mapped[datetime] = mapped_column(nullable=True)
 
-from models.user_conversation import UserConversation
-from models.messages import Messages
+from src.infrastructure.database.models.user_conversation import UserConversation
+from src.infrastructure.database.models.messages import Messages
