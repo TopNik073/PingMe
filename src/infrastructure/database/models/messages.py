@@ -15,23 +15,34 @@ class Messages(BaseModel):
     id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False
     )
-    content: Mapped[str] = mapped_column(TEXT, nullable=True)
+    content: Mapped[str] = mapped_column(TEXT, nullable=False)
 
     sender_id: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), 
         ForeignKey("users.id"),
         nullable=False
     )
     conversation_id: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), 
         ForeignKey("conversations.id"),
         nullable=False
     )
 
-    sender: Mapped["Users"] = relationship(back_populates="messages")
+    sender: Mapped["Users"] = relationship(
+        "Users",
+        foreign_keys=[sender_id],
+        back_populates="messages"
+    )
     forwarded_from_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id"),
+        UUID(as_uuid=True), 
+        ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True
     )
-    forwarded_from: Mapped["Users"] = relationship(back_populates="forwarded_messages")
+    forwarded_from: Mapped["Users"] = relationship(
+        "Users",
+        foreign_keys=[forwarded_from_id],
+        back_populates="forwarded_messages"
+    )
     conversation: Mapped["Conversations"] = relationship(back_populates="messages")
     media: Mapped[List["Media"]] = relationship(back_populates="message")
 
@@ -40,6 +51,7 @@ class Messages(BaseModel):
         default=get_datetime_UTC, onupdate=get_datetime_UTC
     )
 
+    is_edited: Mapped[bool] = mapped_column(nullable=False, default=False)
     is_deleted: Mapped[bool] = mapped_column(nullable=False, default=False)
     deleted_at: Mapped[datetime] = mapped_column(nullable=True)
 

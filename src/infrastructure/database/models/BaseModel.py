@@ -3,6 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncAttrs
 from datetime import datetime, timezone
 
 
+def get_datetime_UTC() -> datetime:
+    """Get current UTC datetime"""
+    date = datetime.now()
+    return date.replace(tzinfo=None)
+
+
 class BaseModel(AsyncAttrs, DeclarativeBase):
     """Base class for inheritance new models"""
 
@@ -17,7 +23,3 @@ class BaseModel(AsyncAttrs, DeclarativeBase):
                 cols.append(f"{col}={getattr(self, col)}")
 
         return f"<{self.__class__.__name__} {', '.join(cols)}>"
-
-
-def get_datetime_UTC():
-    return datetime.now(timezone.utc)
