@@ -10,7 +10,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+from alembic.operations.toimpl import create_constraint
 
 # revision identifiers, used by Alembic.
 revision: str = "50353d6386ee"
@@ -45,11 +45,17 @@ def upgrade() -> None:
             sa.Enum("MANUAL", "GOOGLE", name="auth_provider_type", create_constraint=True),
             nullable=False,
         ),
+        sa.Column(
+            "mailing_method",
+            sa.Enum("EMAIL", "SMS", name="mailing_method_type", create_constraint=True),
+            nullable=False,
+            default="EMAIL",
+        ),
         sa.Column("email", sa.String(), nullable=False),
         sa.Column("phone_number", sa.String(), nullable=True),
         sa.Column("password", sa.String(), nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.Column("username", sa.String(), nullable=False),
+        sa.Column("name", sa.String(), nullable=True),
+        sa.Column("username", sa.String(), nullable=True),
         sa.Column("is_online", sa.Boolean(), nullable=False),
         sa.Column("is_verified", sa.Boolean(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
@@ -147,20 +153,6 @@ def upgrade() -> None:
         sa.UniqueConstraint("id"),
     )
     op.create_table(
-        "tokens",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("user_id", sa.UUID(), nullable=False),
-        sa.Column("token", sa.String(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("expires_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["user_id"],
-            ["users.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("id"),
-    )
-    op.create_table(
         "media",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("content_type", sa.String(), nullable=False),
@@ -206,7 +198,6 @@ def downgrade() -> None:
     op.drop_index("ix_user_conversation_user_id", table_name="user_conversation")
     op.drop_table("user_conversation")
     op.drop_table("media")
-    op.drop_table("tokens")
     op.drop_table("stories")
     op.drop_table("pings")
     op.drop_index("ix_messages_content_trgm", table_name="messages", postgresql_using="gin")
