@@ -5,7 +5,7 @@ from pydantic import PostgresDsn, RedisDsn, HttpUrl, SecretStr
 class Settings(BaseSettings):
     APP_NAME: str = "PingMe"
     DEBUG: bool = False
-    
+
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_HOST: str
@@ -29,10 +29,10 @@ class Settings(BaseSettings):
     WS_MESSAGE_QUEUE_SIZE: int = 1000
     WS_HEARTBEAT_INTERVAL: int = 30
     
-    JWT_SECRET_KEY: str
+    JWT_SECRET_KEY: SecretStr
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: SecretStr
@@ -47,9 +47,12 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: SecretStr
     SMTP_FROM_EMAIL: str
 
+    # Cache settings
+    CACHE_TTL: int = 1800  # 30 minutes default TTL
+
     class Config:
         env_file = ".env"
         case_sensitive = True
 
 
-settings = Settings() 
+settings = Settings()
