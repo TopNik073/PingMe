@@ -19,6 +19,7 @@ AsyncSessionLocal = sessionmaker(
 )
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency for getting a database session"""
     async with AsyncSessionLocal() as session:
         try:
             yield session
