@@ -1,82 +1,64 @@
-from typing import Any, Sequence, Type, TypeVar, AsyncGenerator
+from typing import TypeVar, Generic, Type
 from uuid import UUID
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
 
-from src.application.interfaces.repositories import AbstractRepository
-from src.infrastructure.database.models.BaseModel import BaseModel
+from src.infrastructure.database.models.BaseModel import BaseModel as DBModel
 
-ModelType = TypeVar("ModelType", bound=BaseModel)
-CreateSchemaType = TypeVar("CreateSchemaType")
-UpdateSchemaType = TypeVar("UpdateSchemaType")
+ModelType = TypeVar("ModelType", bound=DBModel)
+CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
+UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 
-class SQLAlchemyRepository(AbstractRepository[ModelType, CreateSchemaType, UpdateSchemaType]):
-    def __init__(self, session_factory: async_sessionmaker, model: Type[ModelType]):
-        self._session_factory = session_factory
+class SQLAlchemyRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
+    def __init__(self, session: AsyncSession, model: Type[ModelType]):
+        self._session = session
         self._model = model
 
-    @property
-    async def session(self) -> AsyncGenerator[AsyncSession, None]:
-        async with self._session_factory() as session:
-            try:
-                yield session
-                await session.commit()
-            except:
-                await session.rollback()
-                raise
-
     async def create(self, schema: CreateSchemaType) -> ModelType:
-        async for session in self.session:
-            db_obj = self._model(**schema.model_dump())
-            session.add(db_obj)
-            await session.flush()
-            return db_obj
-
-    async def get_by_id(self, id: UUID) -> ModelType | None:
-        async for session in self.session:
-            query = select(self._model).where(self._model.id == id)
-            result = await session.execute(query)
-            return result.scalar_one_or_none()
-
-    async def get_by_filter(self, **filters: Any) -> ModelType | None:
-        query = select(self._model)
-        for field, value in filters.items():
-            query = query.where(getattr(self._model, field) == value)
-        async for session in self.session:
-            result = await session.execute(query)
-            return result.scalar_one_or_none()
-
-    async def get_paginated(
-        self,
-        *,
-        skip: int = 0,
-        limit: int = 100,
-        **filters: Any
-    ) -> Sequence[ModelType]:
-        should_return_all = limit == 0
-        query = select(self._model)
-        for field, value in filters.items():
-            query = query.where(getattr(self._model, field) == value)
-        if not should_return_all:
-            query = query.offset(skip).limit(limit)
-        async for session in self.session:
-            result = await session.execute(query)
-            return result.scalars().all()
-
-    async def update(self, id: UUID, schema: UpdateSchemaType) -> ModelType:
-        db_obj = await self.get_by_id(id)
-        if db_obj:
-            obj_data = schema.model_dump(exclude_unset=True)
-            for field, value in obj_data.items():
-                setattr(db_obj, field, value)
-            async for session in self.session:
-                await session.flush()
+        """Create a new record"""
+        db_obj = self._model(**schema.model_dump())
+        self._session.add(db_obj)
+        await self._session.commit()
+        await self._session.refresh(db_obj)
         return db_obj
 
-    async def delete(self, id: UUID) -> None:
+    async def get_by_id(self, id: UUID) -> ModelType | None:
+        """Get record by id"""
+        query = select(self._model).where(self._model.id == id)
+        result = await self._session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def get_by_filter(self, **filters) -> ModelType | None:
+        """Get record by filters"""
+        query = select(self._model)
+        for key, value in filters.items():
+            query = query.where(getattr(self._model, key) == value)
+        result = await self._session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def update(self, id: UUID, schema: UpdateSchemaType) -> ModelType:
+        """Update record"""
         db_obj = await self.get_by_id(id)
-        if db_obj:
-            async for session in self.session:
-                await session.delete(db_obj)
-                await session.flush() 
+        if db_obj is None:
+            return None
+
+        obj_data = schema.model_dump(exclude_unset=True)
+        for key, value in obj_data.items():
+            setattr(db_obj, key, value)
+
+        self._session.add(db_obj)
+        await self._session.commit()
+        await self._session.refresh(db_obj)
+        return db_obj
+
+    async def delete(self, id: UUID) -> bool:
+        """Delete record"""
+        db_obj = await self.get_by_id(id)
+        if db_obj is None:
+            return False
+
+        await self._session.delete(db_obj)
+        await self._session.commit()
+        return True 
