@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: app-container
+    restart: unless-stopped
+    environment:
+      - POSTGRES_HOST=db
+      - REDIS_HOST=redis
+    ports:
+      - "8000:8000"
+      - "465:465"
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - .:/app
+    networks:
+      - app_network
+
+
+  db:
+    image: postgres:17.2
+    container_name: db-container
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+
+  redis:
+    image: redis:7
+    container_name: redis-container
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_network
+    restart: unless-stopped
+
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  app_network:
+    driver: bridge 
