@@ -15,7 +15,6 @@ from src.infrastructure.database.models.media import Media
 from src.infrastructure.database.models.contacts import Contacts
 from src.infrastructure.database.models.stories import Stories
 from src.infrastructure.database.models.pings import Pings
-from src.infrastructure.database.models.tokens import Tokens
 
 from dotenv import load_dotenv
 
@@ -26,11 +25,11 @@ load_dotenv()
 config = context.config
 
 section = config.config_ini_section
-config.set_section_option(section, "DB_NAME", os.getenv("DB_NAME"))
-config.set_section_option(section, "DB_USER", os.getenv("DB_USER"))
-config.set_section_option(section, "DB_PASSWORD", os.getenv("DB_PASSWORD"))
-config.set_section_option(section, "DB_HOST", os.getenv("DB_HOST"))
-config.set_section_option(section, "DB_PORT", os.getenv("DB_PORT"))
+config.set_section_option(section, "POSTGRES_DB", os.getenv("POSTGRES_DB"))
+config.set_section_option(section, "POSTGRES_USER", os.getenv("POSTGRES_USER"))
+config.set_section_option(section, "POSTGRES_PASSWORD", os.getenv("POSTGRES_PASSWORD"))
+config.set_section_option(section, "POSTGRES_HOST", os.getenv("POSTGRES_HOST"))
+config.set_section_option(section, "POSTGRES_PORT", os.getenv("POSTGRES_PORT"))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -87,9 +86,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
