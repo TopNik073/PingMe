@@ -6,14 +6,12 @@ from src.presentation.api.dependencies.services import get_auth_service
 from src.presentation.schemas.responses import ResponseModel, response_success
 from src.presentation.schemas.tokens import (
     JWTTokens,
-    JWTToken,
     RefreshRequestSchema,
     TokenVerifySchema,
 )
 
 from src.presentation.utils.errors import raise_http_exception
 from src.presentation.schemas.users import (
-    UserResponseSchema,
     UserRegisterRequestShema,
     UserLoginRequestShema,
 )
@@ -24,11 +22,13 @@ from src.presentation.schemas.auth import (
     TokenRequestSchema,
     TokenVerifyResponseSchema,
 )
+from src.core.logging import get_logger
 
 if TYPE_CHECKING:
     from src.application.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = get_logger(__name__)
 
 
 @router.post("/register", response_model=ResponseModel[AuthResponseSchema])
@@ -42,6 +42,7 @@ async def register(
             message="Verification code sent to your email",
         )
     except Exception as e:
+        logger.error(f"Failed to start registration: {e}")
         raise_http_exception(message="Failed to start registration", error=e)
 
 
@@ -59,9 +60,11 @@ async def verify_registration(
         )
 
     except IntegrityError:
+        logger.warning(f"User already exists: {credentials.email}")
         raise_http_exception(message="User already exists")
 
     except Exception as e:
+        logger.error(f"Failed to complete registration: {e}")
         raise_http_exception(message="Failed to complete registration", error=e)
 
 
@@ -76,6 +79,7 @@ async def login(
             message="Verification code sent to your email",
         )
     except Exception as e:
+        logger.error(f"Failed to login: {e}")
         raise_http_exception(message="Login failed", error=e)
 
 
@@ -92,6 +96,7 @@ async def verify_login(
             message="Login successful",
         )
     except Exception as e:
+        logger.error(f"Failed to verify login: {e}")
         raise_http_exception(message="Failed to verify login", error=e)
 
 
@@ -106,6 +111,7 @@ async def refresh_tokens(
             message="Tokens refreshed successfully",
         )
     except Exception as e:
+        logger.error(f"Failed to refresh tokens: {e}")
         raise_http_exception(message="Failed to refresh tokens", error=e)
 
 
@@ -125,4 +131,5 @@ async def verify_token(
             message="Token is valid",
         )
     except ValueError as e:
+        logger.error(f"Failed to verify token: {e}")
         raise_http_exception(status_code=status.HTTP_401_UNAUTHORIZED, message=str(e), error=e)
