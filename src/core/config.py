@@ -6,6 +6,10 @@ class Settings(BaseSettings):
     APP_NAME: str = "PingMe"
     DEBUG: bool = False
 
+    # Logging settings
+    LOG_FORMAT: str = "json"  # "json" or "text"
+    LOG_FILE: str | None = "logs/app.log"  # Path to log file, None for stdout only
+    
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_HOST: str
