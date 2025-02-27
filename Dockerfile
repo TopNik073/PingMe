@@ -2,7 +2,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Установка системных зависимостей
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
     netcat-traditional \
@@ -14,17 +14,20 @@ RUN apt-get update && apt-get install -y \
     gcc \
     python3-dev
 
-# Копирование requirements
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && chmod 777 /app/logs
+
+# Copy the requirements file
 COPY requirements.txt .
 
-# Установка зависимостей
+# Install dependencies
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
-# Копирование исходного кода
+# Copy the source code
 COPY . .
 
-# Запуск миграций и приложения
+# Run migrations and start the application
 CMD while ! nc -z db 5432; do sleep 0.1; done && \
     alembic upgrade head && \
     uvicorn main:app --host 0.0.0.0 --port 8000 
