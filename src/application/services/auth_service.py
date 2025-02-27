@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 import random
 import string
@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 from argon2 import PasswordHasher
 
 from src.infrastructure.database.repositories.user_repository import UserRepository
-from src.infrastructure.database.enums.MailingMethods import MailingMethods
 from src.infrastructure.database.enums.AuthProviders import AuthProvidersEnum
+from src.infrastructure.database.enums.MailingMethods import MailingMethods
 from src.infrastructure.cache.redis.auth_cache import AuthCache
 from src.infrastructure.email.smtp_service import SMTPService
 from src.infrastructure.security.jwt import JWTHandler
@@ -15,7 +15,6 @@ from src.infrastructure.security.jwt import JWTHandler
 from src.presentation.schemas.users import (
     UserRegisterDTO,
     UserRegisterRequestShema,
-    UserLoginRequestShema,
 )
 
 from src.presentation.schemas.tokens import JWTTokens, JWTToken
@@ -83,7 +82,6 @@ class AuthService:
         }
 
         await self._auth_cache.save_auth(user_data.email, registration_data)
-        # Add SMS mailing for token
         await self._email_service.send_verification_email(user_data, token)
 
         return token
@@ -124,7 +122,7 @@ class AuthService:
 
     async def login(self, email: str, password: str) -> "Users":
         """Login user and start login session"""
-        user: "Users" = await self.get_user_by_email_from_db(email)
+        user: "Users" | None = await self.get_user_by_email_from_db(email)
         if not user:
             raise ValueError("Invalid email or password")
 
@@ -166,7 +164,7 @@ class AuthService:
         if user_data["token"] != token:
             raise ValueError("Invalid token")
 
-        user: "Users" = await self.get_user_by_email_from_db(email)
+        user: "Users" | None = await self.get_user_by_email_from_db(email)
         if not user:
             raise ValueError("User not found")
 
@@ -200,7 +198,7 @@ class AuthService:
             if not payload or "sub" not in payload:
                 raise ValueError("Invalid token")
 
-            # Проверяем срок действия токена
+            # Check token expiration
             if self._jwt.is_token_expired(token):
                 raise ValueError("Token expired")
 
