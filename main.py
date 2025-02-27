@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-from sys import prefix
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,50 +6,55 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
 
 from src.core.config import settings
+from src.core.logging import init_logging, get_logger
 from src.infrastructure.database.session import engine
 from src.infrastructure.cache.redis.connection import init_redis_pool, close_redis_pool
-from src.presentation.api import auth_router
+from src.presentation.api.system.router import router as system_router
+from src.presentation.api.v1 import V1_PREFIX, auth_router
 
+logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    # Инициализируем подключения к БД и Redis
+    logger.info("Initializing application dependencies")
+    
+    # Initialize connections to the database and Redis
     app.state.redis = await init_redis_pool()
-
+    app.state.start_time = datetime.now(timezone.utc)
+    
+    logger.info("Application started successfully")
     yield
-
+    
     # Shutdown
-    # Закрываем подключения
+    logger.info("Shutting down application")
+    
+    # Close connections
     await close_redis_pool(app.state.redis)
     await engine.dispose()
+    
+    logger.info("Application shutdown complete")
 
 
-app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG, lifespan=lifespan, prefix="api/v1")
+app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG, lifespan=lifespan)
+
+# Initialize logging
+init_logging(app)
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # В продакшене нужно указать конкретные домены
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Здесь будем подключать роутеры
-app.include_router(auth_router)
+# Here we will connect the routers
+app.include_router(auth_router, prefix=V1_PREFIX)
+app.include_router(system_router, prefix="")
 # app.include_router(messages_router)
-# и т.д.
-
-
-@app.get("/")
-@app.get("/health")
-async def health_check():
-    return {
-        "status": "ok",
-        "timestamp": datetime.now(timezone.utc),
-        "redis": await app.state.redis.ping(),  # Проверяем подключение к Redis
-    }
+# and so one
 
 
 if __name__ == "__main__":
