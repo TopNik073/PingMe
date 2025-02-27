@@ -1,69 +1,81 @@
-from typing import TypeVar, Type, Dict
+from typing import TypeVar, Type, Dict, Any, Generic, Union
 from redis.asyncio import Redis
 from pydantic import BaseModel
 from sqlalchemy.orm import DeclarativeBase
+import json
 
-from src.application.interfaces.cache import AbstractCache
+from src.application.interfaces.cache import AbstractCache, CacheType
 from src.core.config import settings
-from src.presentation.schemas.users import UserResponseSchema
-from src.presentation.schemas.tokens import TokenResponse
-from src.infrastructure.database.models.users import Users
-from src.infrastructure.database.models.tokens import Tokens
 
-CacheType = TypeVar("CacheType", bound=BaseModel)
+T = TypeVar('T')
 
-# Маппинг SQLAlchemy моделей на Pydantic схемы
-MODEL_TO_SCHEMA: Dict[Type[DeclarativeBase], Type[BaseModel]] = {
-    Users: UserResponseSchema,
-    Tokens: TokenResponse,
-}
-
-
-class RedisCache(AbstractCache[CacheType]):
-    def __init__(self, redis_client: Redis, model_type: Type[CacheType]):
+class RedisCache(AbstractCache[CacheType], Generic[T, CacheType]):
+    """
+    Universal class for caching in Redis
+    Supports working with Pydantic models, SQLAlchemy models and primitive types
+    """
+    def __init__(self, redis_client: Redis, model_type: Type[Union[T, CacheType]] = None):
         self._redis = redis_client
         self._model_type = model_type
 
-    async def get(self, key: str) -> CacheType | None:
+    async def get(self, key: str) -> Union[T, CacheType]:
         """Get value from cache"""
         value = await self._redis.get(key)
         if value is None:
             return None
-        return self._model_type.model_validate_json(value)
-
-    def _convert_to_schema(self, value: DeclarativeBase) -> BaseModel:
-        """Convert SQLAlchemy model to Pydantic schema"""
-        if isinstance(value, BaseModel):
-            return value
-
-        model_class = value.__class__
-        schema_class = MODEL_TO_SCHEMA.get(model_class)
-
-        if not schema_class:
-            raise ValueError(
-                f"No Pydantic schema found for model {model_class.__name__}. "
-                "Please add it to MODEL_TO_SCHEMA mapping."
-            )
-
-        # Преобразуем SQLAlchemy модель в словарь
-        return schema_class.model_validate(value)
+            
+        # If type is not specified, return string
+        if self._model_type is None:
+            return value.decode('utf-8')  # type: ignore
+            
+        # If type is Pydantic model
+        if issubclass(self._model_type, BaseModel):
+            return self._model_type.model_validate_json(value)  # type: ignore
+            
+        # If this is a primitive type
+        try:
+            data = json.loads(value)
+            return data  # type: ignore
+        except:
+            return value.decode('utf-8')  # type: ignore
 
     async def set(
-        self, key: str, value: DeclarativeBase | BaseModel, expire: int = settings.CACHE_TTL
+        self, key: str, value: Any, expire: int = settings.CACHE_TTL
     ) -> None:
         """Set value to cache"""
-        if value is None:  # Проверяем на None
+        if value is None:
             return
 
-        if isinstance(value, DeclarativeBase):
-            value = self._convert_to_schema(value)
+        # Convert value to string for storage
+        if isinstance(value, BaseModel):
+            # Pydantic model
+            data = value.model_dump_json()
+        elif isinstance(value, DeclarativeBase):
+            # SQLAlchemy model
+            if hasattr(value, "to_dict"):
+                # If there is a to_dict method
+                data = json.dumps(value.to_dict())
+            else:
+                # Otherwise, try to serialize through __dict__
+                data = json.dumps({
+                    c.name: getattr(value, c.name) 
+                    for c in value.__table__.columns
+                }, default=str)
+        elif isinstance(value, (dict, list)):
+            # Dictionary or list
+            data = json.dumps(value, default=str)
+        else:
+            # Primitive type
+            data = str(value)
 
-        json_data = value.model_dump_json()
+        # Save to Redis
         if expire is not None:
-            await self._redis.setex(key, expire, json_data)
+            await self._redis.setex(key, expire, data)
+        else:
+            await self._redis.set(key, data)
 
     async def update(
-        self, key: str, value: DeclarativeBase | BaseModel, expire: int = settings.CACHE_TTL
+        self, key: str, value: Any, expire: int = settings.CACHE_TTL
     ) -> None:
         """Update value in cache and reset TTL"""
         await self.set(key, value, expire=expire)
@@ -75,3 +87,10 @@ class RedisCache(AbstractCache[CacheType]):
     async def exists(self, key: str) -> bool:
         """Check if key exists in cache"""
         return await self._redis.exists(key) > 0
+        
+    async def get_dict(self, key: str) -> Dict[str, Any]:
+        """Get dictionary from cache"""
+        value = await self._redis.get(key)
+        if value is None:
+            return None
+        return json.loads(value)

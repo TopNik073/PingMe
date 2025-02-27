@@ -1,35 +1,30 @@
 from redis.asyncio import Redis
-import json
-from datetime import datetime, timedelta
+from src.infrastructure.cache.redis.redis_cache import RedisCache
+from typing import Dict, Any
 
 
 class AuthCache:
-    """Cache for registration data"""
+    """Cache for authentication data"""
 
     def __init__(self, redis_client: Redis):
-        self._redis = redis_client
+        self._cache = RedisCache(redis_client)
+        self._prefix = "auth:"
 
-    @staticmethod
-    def _get_key(email: str) -> str:
+    def _get_key(self, email: str) -> str:
         """Get cache key for email"""
-        return f"registration:{email}"
+        return f"{self._prefix}{email}"
 
-    async def save_auth(self, email: str, data: dict, expire: int = 600) -> None:  # 10 minutes
-        """Save registration data to cache"""
+    async def save_auth(self, email: str, data: Dict[str, Any], expire: int = 600) -> None:  # 10 minutes
+        """Save authentication data to cache"""
         key = self._get_key(email)
-        await self._redis.setex(key, expire, json.dumps(data))
+        await self._cache.set(key, data, expire=expire)
 
-    async def get_auth(self, email: str) -> dict | None:
-        """Get registration data from cache"""
+    async def get_auth(self, email: str) -> Dict[str, Any]:
+        """Get authentication data from cache"""
         key = self._get_key(email)
-        data = await self._redis.get(key)
-
-        if data is None:
-            return None
-
-        return json.loads(data)
+        return await self._cache.get_dict(key)
 
     async def delete_auth(self, email: str) -> None:
-        """Delete registration data from cache"""
+        """Delete authentication data from cache"""
         key = self._get_key(email)
-        await self._redis.delete(key)
+        await self._cache.delete(key)

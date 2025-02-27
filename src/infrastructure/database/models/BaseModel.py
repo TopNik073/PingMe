@@ -1,6 +1,8 @@
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from datetime import datetime, timezone
+from uuid import UUID
+import json
 
 
 def get_datetime_UTC() -> datetime:
@@ -23,3 +25,21 @@ class BaseModel(AsyncAttrs, DeclarativeBase):
                 cols.append(f"{col}={getattr(self, col)}")
 
         return f"<{self.__class__.__name__} {', '.join(cols)}>"
+    
+    def to_dict(self) -> dict:
+        """Convert model to dictionary"""
+        result = {}
+        for column in self.__table__.columns:
+            value = getattr(self, column.name)
+            
+            # Handle special types
+            if isinstance(value, datetime):
+                value = value.isoformat()
+            elif isinstance(value, UUID):
+                value = str(value)
+            elif hasattr(value, 'value'):  # For Enum types
+                value = value.value
+                
+            result[column.name] = value
+            
+        return result
