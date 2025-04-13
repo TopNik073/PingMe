@@ -1,44 +1,65 @@
-from typing import TypeVar, Generic, Type
+from typing import Type, List, AsyncGenerator
 from uuid import UUID
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
+from sqlalchemy.orm import selectinload
 
-from src.infrastructure.database.models.BaseModel import BaseModel as DBModel
-
-ModelType = TypeVar("ModelType", bound=DBModel)
-CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
-UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
+from src.application.interfaces.repositories import AbstractRepository, MODEL_TYPE, PYDANTIC_TYPE
 
 
-class SQLAlchemyRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
-    def __init__(self, session: AsyncSession, model: Type[ModelType]):
+class SQLAlchemyRepository(AbstractRepository[MODEL_TYPE]):
+    model = type[MODEL_TYPE]
+
+    def __init__(self, session: AsyncSession):
         self._session = session
-        self._model = model
 
-    async def create(self, schema: CreateSchemaType) -> ModelType:
+    async def get_transaction(self) -> AsyncGenerator[AsyncSessionTransaction, None]:
+        async with self._session.begin() as transaction:
+            yield transaction
+
+    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
+        yield self._session
+
+    async def create(self, schema: PYDANTIC_TYPE) -> MODEL_TYPE:
         """Create a new record"""
-        db_obj = self._model(**schema.model_dump())
+        db_obj = self.model(**schema.model_dump())
         self._session.add(db_obj)
         await self._session.commit()
         await self._session.refresh(db_obj)
         return db_obj
 
-    async def get_by_id(self, id: UUID) -> ModelType | None:
+    async def get_by_id(
+        self, id: UUID, include_relations: list[str] | None = None
+    ) -> MODEL_TYPE | None:
         """Get record by id"""
-        query = select(self._model).where(self._model.id == id)
+        query = select(self.model).where(self.model.id == id)
+        if include_relations:
+            for relation in include_relations:
+                query = query.options(selectinload(getattr(self.model, relation)))
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_by_filter(self, **filters) -> ModelType | None:
-        """Get record by filters"""
-        query = select(self._model)
+    async def get_by_filter(
+        self, include_relations: list[str] | None = None, **filters
+    ) -> List[MODEL_TYPE] | None:
+        """Get records by filters with optional related data loading"""
+        query = select(self.model)
+
+        # Add relation loading if specified
+        if include_relations:
+            for relation in include_relations:
+                query = query.options(selectinload(getattr(self.model, relation)))
+
+        # Add filters
         for key, value in filters.items():
-            query = query.where(getattr(self._model, key) == value)
-        result = await self._session.execute(query)
-        return result.scalar_one_or_none()
+            query = query.where(getattr(self.model, key) == value)
 
-    async def update(self, id: UUID, schema: UpdateSchemaType) -> ModelType:
+        result = await self._session.execute(query)
+        records = result.scalars().all()
+
+        return list(records) if records else None
+
+    async def update(self, id: UUID, schema: PYDANTIC_TYPE) -> MODEL_TYPE:
         """Update record"""
         db_obj = await self.get_by_id(id)
         if db_obj is None:
@@ -61,4 +82,40 @@ class SQLAlchemyRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType
 
         await self._session.delete(db_obj)
         await self._session.commit()
-        return True 
+        return True
+
+    async def get_paginated(
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        include_relations: list[str] | None = None,
+        **filters,
+    ) -> List[MODEL_TYPE]:
+        """Get paginated records with optional filters and related data loading"""
+        query = select(self.model)
+
+        # Add relation loading if specified
+        if include_relations:
+            for relation in include_relations:
+                query = query.options(selectinload(getattr(self.model, relation)))
+
+        # Add filters
+        for key, value in filters.items():
+            query = query.where(getattr(self.model, key) == value)
+
+        # Add pagination
+        query = query.offset(skip).limit(limit)
+
+        result = await self._session.execute(query)
+        records = result.scalars().all()
+
+        res = [
+            {
+                "total": len(records),
+                "page": skip // limit + 1,
+                "limit": limit,
+            }
+        ]
+
+        return res.append(records)
