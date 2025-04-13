@@ -8,11 +8,11 @@ from src.infrastructure.database.repositories.user_repository import UserReposit
 from src.infrastructure.email.smtp_service import SMTPService
 from src.infrastructure.cache.redis.auth_cache import AuthCache
 from src.application.services.auth_service import AuthService
+from src.application.services.user_service import UserService
 
 
 async def get_auth_service(
-    session: AsyncSession = Depends(get_db),
-    redis: Redis = Depends(get_redis)
+    session: AsyncSession = Depends(get_db), redis: Redis = Depends(get_redis)
 ) -> AuthService:
     """Get AuthService instance with all dependencies"""
     user_repository = UserRepository(session)
@@ -23,4 +23,8 @@ async def get_auth_service(
         user_repository=user_repository,
         email_service=email_service,
         auth_cache=auth_cache,
-    ) 
+    )
+
+
+async def get_user_service(session: AsyncSession = Depends(get_db)) -> UserService:
+    return UserService(user_repository=UserRepository(session))

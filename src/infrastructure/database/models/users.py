@@ -28,7 +28,7 @@ class Users(BaseModel):
     password: Mapped[str] = mapped_column(nullable=False)
 
     name: Mapped[str] = mapped_column(nullable=False)
-    username: Mapped[str] = mapped_column(nullable=False)
+    username: Mapped[str] = mapped_column(nullable=True)
 
     is_online: Mapped[bool] = mapped_column(nullable=False, default=False)
     is_verified: Mapped[bool] = mapped_column(nullable=False, default=False)

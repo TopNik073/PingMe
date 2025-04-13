@@ -40,10 +40,13 @@ class JWTHandler:
         )
 
     @staticmethod
-    def is_token_expired(token: str) -> bool:
+    def is_token_expired(token: str | dict) -> bool:
         """Check if token is expired"""
         try:
-            payload = JWTHandler.decode_token(token)
+            if isinstance(token, str):
+                payload = JWTHandler.decode_token(token)
+            else:
+                payload = token
             exp = payload.get("exp")
             if not exp:
                 return True
