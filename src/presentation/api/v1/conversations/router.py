@@ -12,7 +12,7 @@ async def create_conversation(current_user: current_user_dep):
 
 
 @router.patch("/")
-async def create_conversation(current_user: current_user_dep):
+async def update_conversation(current_user: current_user_dep):
     pass
 
 
