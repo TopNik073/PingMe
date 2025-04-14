@@ -12,6 +12,10 @@ class UserLoginRequestShema(BaseModel):
     password: str = Field(..., min_length=6)
 
 
+class UserResetRequestSchema(BaseModel):
+    email: EmailStr
+
+
 class UserRegisterRequestShema(UserLoginRequestShema):
     """Schema for user creation"""
 

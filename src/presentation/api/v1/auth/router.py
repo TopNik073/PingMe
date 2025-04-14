@@ -14,6 +14,7 @@ from src.presentation.utils.errors import raise_http_exception
 from src.presentation.schemas.users import (
     UserRegisterRequestShema,
     UserLoginRequestShema,
+    UserResetRequestSchema,
 )
 from src.presentation.schemas.auth import (
     AuthResponseSchema,
@@ -98,6 +99,38 @@ async def verify_login(
     except Exception as e:
         logger.error(f"Failed to verify login: {e}")
         raise_http_exception(message="Failed to verify login", error=e)
+
+
+@router.post("/reset-password", response_model=ResponseModel[AuthResponseSchema])
+async def reset_password(
+    credentials: UserResetRequestSchema, auth_service: "AuthService" = Depends(get_auth_service)
+) -> ResponseModel[AuthResponseSchema]:
+    try:
+        user = await auth_service.reset_password(credentials.email)
+        return response_success(
+            data=AuthResponseSchema(email=user.email),
+            message="Verification code sent to your email",
+        )
+    except Exception as e:
+        logger.error(f"Failed to verify reset password: {e}")
+        raise_http_exception(message="Failed to reset password", error=e)
+
+
+@router.post("/verify-reset-password", response_model=ResponseModel[AuthResponseVerifySchema])
+async def verify_reset_password(
+    credentials: AuthVerifyRequestShema, auth_service: "AuthService" = Depends(get_auth_service)
+) -> ResponseModel[AuthResponseVerifySchema]:
+    try:
+        user, tokens = await auth_service.verify_reset_password(
+            credentials.email, credentials.token, credentials.password
+        )
+        return response_success(
+            data=AuthResponseVerifySchema(user=user, tokens=tokens),
+            message="Password reset successfully",
+        )
+    except Exception as e:
+        logger.error(f"Failed to verify reset password: {e}")
+        raise_http_exception(message="Failed to verify reset password", error=e)
 
 
 @router.post("/refresh", response_model=ResponseModel[JWTTokens])

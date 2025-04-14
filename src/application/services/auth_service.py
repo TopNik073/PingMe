@@ -22,6 +22,8 @@ from src.presentation.schemas.tokens import JWTTokens, JWTToken
 if TYPE_CHECKING:
     from src.infrastructure.database.models.users import Users
 
+TEN_MIN_TIMEDELTA = (datetime.now() + timedelta(minutes=10)).isoformat()
+
 
 class AuthService:
     def __init__(
@@ -45,13 +47,26 @@ class AuthService:
             token += random.choice(string.digits)
         return token
 
+    async def send_verification_token(self, user: "Users") -> str:
+        token = self.generate_token()
+        if user.mailing_method == MailingMethods.EMAIL:
+            await self._email_service.send_verification_email(user, token)
+        elif user.mailing_method == MailingMethods.SMS:
+            # TODO: implement SMS mailing
+            pass
+
+        return token
+
     async def get_user_by_email_from_cache(self, email: str) -> Optional["Users"]:
         cache_key = f"user:email:{email}"
         user = await self._auth_cache.get_auth(cache_key)
         return user
 
     async def get_user_by_email_from_db(self, email: str) -> Optional["Users"]:
-        return await self._repository.get_by_filter(email=email)
+        user = await self._repository.get_by_filter(email=email)
+        if user is None:
+            raise ValueError("User not found")
+        return user[0]
 
     async def create_tokens(self, user_id: UUID) -> JWTTokens:
         """Create access and refresh tokens with expiration times"""
@@ -78,7 +93,7 @@ class AuthService:
             "user_data": user_data.model_dump(),
             "token": token,
             "token_type": "registration",
-            "expires_at": (datetime.now() + timedelta(minutes=10)).isoformat(),
+            "expires_at": TEN_MIN_TIMEDELTA,
         }
 
         await self._auth_cache.save_auth(user_data.email, registration_data)
@@ -134,17 +149,12 @@ class AuthService:
         except:
             raise ValueError("Invalid email or password")
 
-        token = self.generate_token()
-        if user.mailing_method == MailingMethods.EMAIL:
-            await self._email_service.send_verification_email(user, token)
-        elif user.mailing_method == MailingMethods.SMS:
-            # TODO: implement SMS mailing
-            pass
+        token = await self.send_verification_token(user)
 
         login_data = {
             "token": token,
             "token_type": "login",
-            "expires_at": (datetime.now() + timedelta(minutes=10)).isoformat(),
+            "expires_at": TEN_MIN_TIMEDELTA,
         }
 
         await self._auth_cache.save_auth(email, login_data)
@@ -170,6 +180,48 @@ class AuthService:
 
         if not self._password_hasher.verify(user.password, password):
             raise ValueError("Passwords doesn't match")
+
+        tokens = await self.create_tokens(user.id)
+        await self._auth_cache.delete_auth(email)
+        return user, tokens
+
+    async def reset_password(self, email: str):
+        user: "Users" | None = await self.get_user_by_email_from_db(email)
+        if not user:
+            raise ValueError("Invalid email or password")
+
+        if await self._auth_cache.get_auth(email):
+            await self._auth_cache.delete_auth(email)
+
+        token = await self.send_verification_token(user)
+
+        reset_data = {
+            "token": token,
+            "token_type": "reset",
+            "expires_at": TEN_MIN_TIMEDELTA,
+        }
+
+        await self._auth_cache.save_auth(email, reset_data)
+        return user
+
+    async def verify_reset_password(self, email: str, token: str, new_password: str):
+        """Complete login session"""
+        user_data = await self._auth_cache.get_auth(email)
+        if not user_data:
+            raise ValueError("Reset session not find or expired")
+
+        if user_data["token_type"] != "reset":
+            raise ValueError("Invalid token type")
+
+        if user_data["token"] != token:
+            raise ValueError("Invalid token")
+
+        user: "Users" | None = await self.get_user_by_email_from_db(email)
+        if not user:
+            raise ValueError("User not found")
+
+        user.password = self._password_hasher.hash(new_password)
+        await self._repository.update(data=user)
 
         tokens = await self.create_tokens(user.id)
         await self._auth_cache.delete_auth(email)
