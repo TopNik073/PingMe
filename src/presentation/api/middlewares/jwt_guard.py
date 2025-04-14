@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, TYPE_CHECKING
 
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -7,6 +7,9 @@ from src.application.services.user_service import UserService
 from src.infrastructure.security.jwt import JWTHandler
 from src.presentation.api.dependencies.services import get_user_service
 from src.presentation.utils.errors import raise_unauthorized_error, raise_http_exception
+
+if TYPE_CHECKING:
+    from src.infrastructure.database.models.users import Users
 
 security = HTTPBearer()
 jwt_handler = JWTHandler()
@@ -52,3 +55,6 @@ async def get_current_user(
         return user
     except:
         return raise_unauthorized_error()
+
+
+current_user_dep = Annotated["Users", Depends(get_current_user)]
