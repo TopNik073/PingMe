@@ -59,17 +59,36 @@ class SQLAlchemyRepository(AbstractRepository[MODEL_TYPE]):
 
         return list(records) if records else None
 
-    async def update(self, id: UUID, schema: PYDANTIC_TYPE) -> MODEL_TYPE:
-        """Update record"""
-        db_obj = await self.get_by_id(id)
-        if db_obj is None:
-            return None
+    async def update(
+        self, id: UUID | None = None, data: PYDANTIC_TYPE | MODEL_TYPE = None
+    ) -> MODEL_TYPE:
+        """
+        Update record.
+        Can accept either a Pydantic schema or an already updated model instance.
+        If model instance is provided, id parameter is ignored.
+        """
+        if data is None:
+            raise ValueError("Data must be provided")
 
-        obj_data = schema.model_dump(exclude_unset=True)
-        for key, value in obj_data.items():
-            setattr(db_obj, key, value)
+        if type(data) is self.model:
+            # If we already have a model instance, just update it
+            db_obj = data
+            self._session.add(db_obj)
+        else:
+            # If we have a schema, proceed with normal update
+            update_data = data.model_dump(exclude_unset=True)
 
-        self._session.add(db_obj)
+            query = select(self.model).where(self.model.id == id).with_for_update()
+
+            result = await self._session.execute(query)
+            db_obj = result.scalar_one_or_none()
+
+            if db_obj is None:
+                return None
+
+            for key, value in update_data.items():
+                setattr(db_obj, key, value)
+
         await self._session.commit()
         await self._session.refresh(db_obj)
         return db_obj
