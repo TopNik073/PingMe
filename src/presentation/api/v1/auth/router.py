@@ -1,9 +1,8 @@
-from typing import TYPE_CHECKING
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 from sqlalchemy.exc import IntegrityError
 
-from src.presentation.api.dependencies.services import get_auth_service
-from src.presentation.schemas.responses import ResponseModel, response_success
+from src.presentation.api.dependencies.services import AUTH_SERVICE_DEP
+from src.presentation.schemas.responses import ResponseModel, response_success, SuccessResponse
 from src.presentation.schemas.tokens import (
     JWTTokens,
     RefreshRequestSchema,
@@ -25,20 +24,17 @@ from src.presentation.schemas.auth import (
 )
 from src.core.logging import get_logger
 
-if TYPE_CHECKING:
-    from src.application.services.auth_service import AuthService
-
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = get_logger(__name__)
 
 
 @router.post("/register", response_model=ResponseModel[AuthResponseSchema])
 async def register(
-    user_data: UserRegisterRequestShema, auth_service: "AuthService" = Depends(get_auth_service)
-) -> ResponseModel[AuthResponseSchema]:
+    user_data: UserRegisterRequestShema, auth_service: AUTH_SERVICE_DEP
+) -> SuccessResponse[AuthResponseSchema]:
     try:
         await auth_service.start_registration(user_data)
-        return response_success(
+        return SuccessResponse(
             data=AuthResponseSchema(email=user_data.email),
             message="Verification code sent to your email",
         )
@@ -49,7 +45,7 @@ async def register(
 
 @router.post("/verify-registration", response_model=ResponseModel[AuthResponseVerifySchema])
 async def verify_registration(
-    credentials: AuthVerifyRequestShema, auth_service: "AuthService" = Depends(get_auth_service)
+    credentials: AuthVerifyRequestShema, auth_service: AUTH_SERVICE_DEP
 ) -> ResponseModel[AuthResponseVerifySchema]:
     try:
         user, tokens = await auth_service.complete_registration(
@@ -71,7 +67,7 @@ async def verify_registration(
 
 @router.post("/login", response_model=ResponseModel[AuthResponseSchema])
 async def login(
-    credentials: UserLoginRequestShema, auth_service: "AuthService" = Depends(get_auth_service)
+    credentials: UserLoginRequestShema, auth_service: AUTH_SERVICE_DEP
 ) -> ResponseModel[AuthResponseSchema]:
     try:
         user = await auth_service.login(credentials.email, credentials.password)
@@ -86,7 +82,7 @@ async def login(
 
 @router.post("/verify-login", response_model=ResponseModel[AuthResponseVerifySchema])
 async def verify_login(
-    credentials: AuthVerifyRequestShema, auth_service: "AuthService" = Depends(get_auth_service)
+    credentials: AuthVerifyRequestShema, auth_service: AUTH_SERVICE_DEP
 ) -> ResponseModel[AuthResponseVerifySchema]:
     try:
         user, tokens = await auth_service.verify_login(
@@ -103,7 +99,7 @@ async def verify_login(
 
 @router.post("/reset-password", response_model=ResponseModel[AuthResponseSchema])
 async def reset_password(
-    credentials: UserResetRequestSchema, auth_service: "AuthService" = Depends(get_auth_service)
+    credentials: UserResetRequestSchema, auth_service: AUTH_SERVICE_DEP
 ) -> ResponseModel[AuthResponseSchema]:
     try:
         user = await auth_service.reset_password(credentials.email)
@@ -118,7 +114,7 @@ async def reset_password(
 
 @router.post("/verify-reset-password", response_model=ResponseModel[AuthResponseVerifySchema])
 async def verify_reset_password(
-    credentials: AuthVerifyRequestShema, auth_service: "AuthService" = Depends(get_auth_service)
+    credentials: AuthVerifyRequestShema, auth_service: AUTH_SERVICE_DEP
 ) -> ResponseModel[AuthResponseVerifySchema]:
     try:
         user, tokens = await auth_service.verify_reset_password(
@@ -135,7 +131,7 @@ async def verify_reset_password(
 
 @router.post("/refresh", response_model=ResponseModel[JWTTokens])
 async def refresh_tokens(
-    refresh_data: RefreshRequestSchema, auth_service: "AuthService" = Depends(get_auth_service)
+    refresh_data: RefreshRequestSchema, auth_service: AUTH_SERVICE_DEP
 ) -> ResponseModel[JWTTokens]:
     try:
         tokens = await auth_service.refresh_tokens(refresh_data.refresh_token)
@@ -150,7 +146,7 @@ async def refresh_tokens(
 
 @router.post("/verify-token", response_model=ResponseModel[TokenVerifyResponseSchema])
 async def verify_token(
-    token: TokenRequestSchema, auth_service: "AuthService" = Depends(get_auth_service)
+    token: TokenRequestSchema, auth_service: AUTH_SERVICE_DEP
 ) -> ResponseModel[TokenVerifyResponseSchema]:
     try:
         user, expiration_time, token_type = await auth_service.verify_token(token.token)

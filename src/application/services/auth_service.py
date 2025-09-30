@@ -64,9 +64,7 @@ class AuthService:
 
     async def get_user_by_email_from_db(self, email: str) -> Optional["Users"]:
         user = await self._repository.get_by_filter(email=email)
-        if user is None:
-            raise ValueError("User not found")
-        return user[0]
+        return user[0] if user else None
 
     async def create_tokens(self, user_id: UUID) -> JWTTokens:
         """Create access and refresh tokens with expiration times"""

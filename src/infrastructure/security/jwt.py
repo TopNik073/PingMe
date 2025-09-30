@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Literal
 from jose import jwt
 from uuid import UUID
 
@@ -10,21 +10,23 @@ class JWTHandler:
     """Handler for JWT tokens"""
 
     @staticmethod
-    def create_jwt_token(user_id: UUID, token_type: str) -> tuple[str, datetime]:
+    def create_jwt_token(
+        user_id: UUID, token_type: Literal["access", "refresh"]
+    ) -> tuple[str, datetime]:
         """Create jwt token"""
         current_date = datetime.now()
         current_date: datetime = current_date.replace(tzinfo=None)
         if token_type == "access":
-            expires_delta = timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
+            expires_delta = timedelta(seconds=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
         else:
-            expires_delta = timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+            expires_delta = timedelta(seconds=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
 
         expires_at: datetime = current_date + expires_delta
 
         jwt_data = {
             "sub": str(user_id),
             "type": token_type,
-            "exp": int(expires_at.timestamp()),  # Конвертируем в timestamp
+            "exp": int(expires_at.timestamp()),
         }
 
         token = jwt.encode(

@@ -1,15 +1,12 @@
-from typing import Annotated, TYPE_CHECKING
+from typing import Annotated
 
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from src.application.services.user_service import UserService
+from src.infrastructure.database.models.users import Users
 from src.infrastructure.security.jwt import JWTHandler
-from src.presentation.api.dependencies.services import get_user_service
-from src.presentation.utils.errors import raise_unauthorized_error, raise_http_exception
-
-if TYPE_CHECKING:
-    from src.infrastructure.database.models.users import Users
+from src.presentation.api.dependencies.services import USER_SERVICE_DEP
+from src.presentation.utils.errors import raise_unauthorized_error
 
 security = HTTPBearer()
 jwt_handler = JWTHandler()
@@ -33,7 +30,7 @@ def verify_token(payload: dict) -> bool:
 
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
-    user_service: Annotated[UserService, Depends(get_user_service)],
+    user_service: USER_SERVICE_DEP,
 ):
     """
     Get current user from JWT token
@@ -57,4 +54,4 @@ async def get_current_user(
         return raise_unauthorized_error()
 
 
-current_user_dep = Annotated["Users", Depends(get_current_user)]
+current_user_dep = Annotated[Users, Depends(get_current_user)]

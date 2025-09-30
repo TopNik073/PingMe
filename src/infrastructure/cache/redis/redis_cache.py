@@ -88,7 +88,7 @@ class RedisCache(AbstractCache[CacheType], Generic[T, CacheType]):
         """Check if key exists in cache"""
         return await self._redis.exists(key) > 0
         
-    async def get_dict(self, key: str) -> Dict[str, Any]:
+    async def get_dict(self, key: str) -> Dict[str, Any] | None:
         """Get dictionary from cache"""
         value = await self._redis.get(key)
         if value is None:

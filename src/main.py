@@ -6,9 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
 
 from src.core.config import settings
-from src.core.logging import init_logging, get_logger
+from src.core.logging import get_logger
 from src.infrastructure.database.session import engine
 from src.infrastructure.cache.redis.connection import init_redis_pool, close_redis_pool
+
+# ROUTERS
 from src.presentation.api.system.router import router as system_router
 from src.presentation.api.v1 import V1_ROUTER
 
@@ -24,7 +26,8 @@ async def lifespan(app: FastAPI):
     app.state.redis = await init_redis_pool()
     app.state.start_time = datetime.now(timezone.utc)
 
-    logger.info("Application started successfully")
+    docs_route = f"http://{settings.APP_HOST}:{settings.APP_PORT}/docs"
+    logger.info(f"Application started successfully. See docs here {docs_route}")
     yield
 
     # Shutdown
@@ -39,19 +42,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG, lifespan=lifespan)
 
-# Initialize logging
-init_logging(app)
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Here we will connect the routers
+# Connect routers
 app.include_router(V1_ROUTER)
 app.include_router(system_router)
 
@@ -59,4 +60,6 @@ app.include_router(system_router)
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run(
+        "main:app", host=settings.APP_HOST, port=settings.APP_PORT, reload=False, log_level=40
+    )

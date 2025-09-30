@@ -61,7 +61,7 @@ class SQLAlchemyRepository(AbstractRepository[MODEL_TYPE]):
 
     async def update(
         self, id: UUID | None = None, data: PYDANTIC_TYPE | MODEL_TYPE = None
-    ) -> MODEL_TYPE:
+    ) -> MODEL_TYPE | None:
         """
         Update record.
         Can accept either a Pydantic schema or an already updated model instance.
