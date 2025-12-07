@@ -48,18 +48,18 @@ class Settings(BaseSettings):
     REDIS_HOST: str
     REDIS_PORT: int
     REDIS_DB: int = 0
-    REDIS_PASS: str | None = None
+    REDIS_PASSWORD: str | None = None
     
     @property
     def REDIS_URL(self) -> RedisDsn:
-        auth = f":{self.REDIS_PASS}@" if not self.DEBUG else ""
+        auth = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
         return f"redis://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
     # -------------- JWT --------------
     JWT_SECRET_KEY: SecretStr
     JWT_ALGORITHM: str = "HS256"
-    JWT_ACCESS_TOKEN_EXPIRE: int = 30 * 60 # In seconds
-    JWT_REFRESH_TOKEN_EXPIRE: int = 30 * 24 * 60 * 60 # In seconds
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30 * 60 # In seconds
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30 * 24 * 60 * 60 # In seconds
 
     # -------------- GOOGLE --------------
     GOOGLE_CLIENT_ID: str
@@ -73,15 +73,39 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: SecretStr
     SMTP_FROM_EMAIL: str
 
+    # -------------- S3 --------------
+    S3_BUCKET: str
+    S3_ENDPOINT: str
+    S3_REGION: str = "ru-central1"
+    S3_ACCESS_KEY: str
+    S3_SECRET_KEY: SecretStr
 
     # -------------- ADDITIONAL APP SETTINGS --------------
     PASSWORD_MIN_LENGTH: int = 6
     PASSWORD_MAX_LENGTH: int = 72
 
-    WS_MESSAGE_QUEUE_SIZE: int = 1000
     WS_HEARTBEAT_INTERVAL: int = 30
+    WS_HEARTBEAT_TIMEOUT: int = 60  # seconds without ping before disconnect
+    WS_TYPING_TIMEOUT: int = 5  # seconds
+    WS_MAX_MESSAGE_SIZE: int = 65536  # 64KB
+    
+    # Rate limiting (per minute)
+    WS_RATE_LIMIT_MESSAGES_PER_MINUTE: int = 50
+    WS_RATE_LIMIT_TYPING_PER_MINUTE: int = 30
+    WS_RATE_LIMIT_GENERAL_PER_MINUTE: int = 150
 
     CACHE_TTL: int = 1800  # 30 minutes default TTL
+    
+    # -------------- FCM --------------
+    FCM_CREDENTIALS_PATH: str | None = None
+    
+    @property
+    def FCM_CREDENTIALS_FILE(self) -> Path | None:
+        """Get FCM credentials file path"""
+        if not self.FCM_CREDENTIALS_PATH:
+            default_path = self.BASE_DIR / "credentials.json"
+            return default_path if default_path.exists() else None
+        return Path(self.FCM_CREDENTIALS_PATH) if self.FCM_CREDENTIALS_PATH else None
 
 
 settings = Settings()

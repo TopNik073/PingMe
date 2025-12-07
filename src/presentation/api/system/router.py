@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, Request
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timezone
+from typing import Any
 
-from src.infrastructure.database.session import get_db
-from src.infrastructure.cache.redis.connection import get_redis
-from redis.asyncio import Redis
+from fastapi import APIRouter, Request
+from sqlalchemy import text
+from datetime import datetime, UTC
+
+from src.infrastructure.database.session import DB_DEP
+from src.infrastructure.cache.redis.connection import REDIS_DEP
 
 from src.presentation.schemas.system import HealthResponse, ServiceStatus
 from src.core.logging import get_logger
@@ -17,9 +17,9 @@ logger = get_logger(__name__)
 @router.get("/health", response_model=HealthResponse)
 async def health_check(
     request: Request,
-    redis: Redis = Depends(get_redis),
-    db: AsyncSession = Depends(get_db),
-):
+    redis: REDIS_DEP,
+    db: DB_DEP,
+) -> HealthResponse:
     """
     Check the health of the application and its dependencies.
     
@@ -32,10 +32,9 @@ async def health_check(
     uptime_seconds = None
     
     if start_time:
-        uptime_seconds = (datetime.now(timezone.utc) - start_time).total_seconds()
+        uptime_seconds = (datetime.now(UTC) - start_time).total_seconds()
     
     # Check Redis
-    redis_start = datetime.now()
     redis_ok = False
     redis_latency = 0
     
@@ -44,13 +43,13 @@ async def health_check(
         redis_start = datetime.now()
         redis_ok = await redis.ping()
         redis_latency = (datetime.now() - redis_start).total_seconds() * 1000
-        logger.debug(f"Redis ping successful, latency: {redis_latency:.2f}ms")
+        logger.debug("Redis ping successful, latency: %.2fms", redis_latency)
     except Exception as e:
-        logger.error(f"Redis connection failed: {str(e)}")
+        logger.error("Redis connection failed: %s", e)
     
     # Get Redis version and details
-    redis_version = None
-    redis_details = None
+    redis_version: Any | None = None
+    redis_details: dict[str, Any] = {}
     try:
         redis_info = await redis.info()
         redis_version = redis_info.get('redis_version')
@@ -58,9 +57,9 @@ async def health_check(
             "used_memory_human": redis_info.get('used_memory_human'),
             "connected_clients": redis_info.get('connected_clients'),
         }
-        logger.debug(f"Redis version: {redis_version}")
+        logger.debug("Redis version: %s", redis_version)
     except Exception as e:
-        logger.error(f"Failed to get Redis info: {str(e)}")
+        logger.error("Failed to get Redis info: %s", e)
         redis_details = {"error": str(e)}
     
     # Check database
@@ -75,14 +74,14 @@ async def health_check(
         result = await db.execute(text("SELECT version();"))
         db_version = result.scalar()
         db_latency = (datetime.now() - db_start).total_seconds() * 1000
-        logger.debug(f"Database query successful, latency: {db_latency:.2f}ms")
+        logger.debug("Database query successful, latency: %.2fms", db_latency)
     except Exception as e:
-        logger.error(f"Database connection failed: {str(e)}")
+        logger.error("Database connection failed: %s", e)
         db_ok = False
         db_details = {"error": str(e)}
     
     response = HealthResponse(
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         uptime_seconds=uptime_seconds,
         start_time=start_time,
         database=ServiceStatus(

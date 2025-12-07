@@ -1,0 +1,26 @@
+name: Lint with Ruff
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  ruff-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ruff and Just
+        run: |
+          pip install ruff
+          curl -LSfs https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+
+      - name: Run lint via Just
+        run: just lint

@@ -1,13 +1,6 @@
-import asyncio
 
-import uuid
 
-from typing import Optional
-from functools import wraps
 
-from fastapi import FastAPI, Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.types import ASGIApp
 
 
 import json
@@ -79,8 +72,9 @@ def mask_sensitive_data(
     logger: structlog.BoundLogger, _method_name: str, event_dict: dict[str, Any]
 ) -> Any:
     """Recursively mask sensitive data"""
+    PARAM_PARTS_WITH_VALUE = 2
 
-    def _mask_data(data: Any) -> Any:
+    def _mask_data(data: Any) -> Any:  # noqa: PLR0912
         if isinstance(data, dict):
             result = {}
             for key, value in data.items():
@@ -89,7 +83,8 @@ def mask_sensitive_data(
                         result[key] = _mask_data(json.loads(value))
                     except json.JSONDecodeError as e:
                         logger.warning(
-                            f"Error masking data: {e}",
+                            "Error masking data: %s",
+                            e,
                             exc_info=e,
                         )
                         result[key] = value
@@ -101,8 +96,14 @@ def mask_sensitive_data(
                         return data
                     temp = {}
                     for param in params:
-                        param_name, param_value = param.split("=")
-                        temp[param_name] = param_value
+                        # Split only on the first "=" to handle values that contain "="
+                        parts = param.split("=", 1)
+                        if len(parts) == PARAM_PARTS_WITH_VALUE:
+                            param_name, param_value = parts
+                            temp[param_name] = param_value
+                        elif len(parts) == 1:
+                            # Parameter without value (e.g., "flag" instead of "flag=true")
+                            temp[parts[0]] = ""
                     result[key] = _mask_data(temp)
                 elif isinstance(value, dict | list):
                     result[key] = _mask_data(value)

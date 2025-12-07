@@ -1,4 +1,3 @@
-from typing import List
 
 from sqlalchemy import ForeignKey, Index, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -44,7 +43,7 @@ class Messages(BaseModel):
         back_populates="forwarded_messages"
     )
     conversation: Mapped["Conversations"] = relationship(back_populates="messages")
-    media: Mapped[List["Media"]] = relationship(back_populates="message")
+    media: Mapped[list["Media"]] = relationship(back_populates="message")
 
     created_at: Mapped[datetime] = mapped_column(default=get_datetime_UTC)
     updated_at: Mapped[datetime] = mapped_column(
@@ -55,7 +54,7 @@ class Messages(BaseModel):
     is_deleted: Mapped[bool] = mapped_column(nullable=False, default=False)
     deleted_at: Mapped[datetime] = mapped_column(nullable=True)
 
-    last_read_by: Mapped[List["UserConversation"]] = relationship(back_populates="last_read_message")
+    last_read_by: Mapped[list["UserConversation"]] = relationship(back_populates="last_read_message")
 
     __table_args__ = (
         Index(

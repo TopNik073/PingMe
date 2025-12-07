@@ -3,16 +3,19 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 from src.core.config import settings
 from src.core.logging import get_logger
+from src.presentation.middlewares.logging import RequestLoggingMiddleware
+from src.core.startup import initialize_fcm_service
 from src.infrastructure.database.session import engine
 from src.infrastructure.cache.redis.connection import init_redis_pool, close_redis_pool
 
 # ROUTERS
 from src.presentation.api.system.router import router as system_router
 from src.presentation.api.v1 import V1_ROUTER
+from src.presentation.middlewares.ws_logging import WebSocketLoggingMiddleware
 
 logger = get_logger(__name__)
 
@@ -24,10 +27,13 @@ async def lifespan(app: FastAPI):
 
     # Initialize connections to the database and Redis
     app.state.redis = await init_redis_pool()
-    app.state.start_time = datetime.now(timezone.utc)
+    app.state.start_time = datetime.now(UTC)
+
+    # Initialize FCM service
+    await initialize_fcm_service(app)
 
     docs_route = f"http://{settings.APP_HOST}:{settings.APP_PORT}/docs"
-    logger.info(f"Application started successfully. See docs here {docs_route}")
+    logger.info("Application started successfully. See docs here %s", docs_route)
     yield
 
     # Shutdown
@@ -51,6 +57,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Setup service middlewares
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(WebSocketLoggingMiddleware)
 
 # Connect routers
 app.include_router(V1_ROUTER)

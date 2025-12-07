@@ -1,9 +1,7 @@
-from typing import List
 
-from alembic.operations.toimpl import create_constraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Enum, ForeignKey
+from sqlalchemy import Enum
 
 import uuid
 from datetime import datetime
@@ -32,6 +30,9 @@ class Users(BaseModel):
 
     is_online: Mapped[bool] = mapped_column(nullable=False, default=False)
     is_verified: Mapped[bool] = mapped_column(nullable=False, default=False)
+    
+    last_seen: Mapped[datetime] = mapped_column(nullable=True)
+    fcm_token: Mapped[str] = mapped_column(nullable=True)
 
     mailing_method: Mapped[MailingMethods] = mapped_column(
         Enum(MailingMethods, name="mailing_method_type", create_constraint=True),
@@ -39,26 +40,29 @@ class Users(BaseModel):
         default=MailingMethods.EMAIL,
     )
 
-    messages: Mapped[List["Messages"]] = relationship(
+    messages: Mapped[list["Messages"]] = relationship(
         back_populates="sender", foreign_keys="Messages.sender_id"
     )
-    forwarded_messages: Mapped[List["Messages"]] = relationship(
+    forwarded_messages: Mapped[list["Messages"]] = relationship(
         back_populates="forwarded_from", foreign_keys="Messages.forwarded_from_id"
     )
 
-    conversations: Mapped[List["UserConversation"]] = relationship(back_populates="user")
-    sent_pings: Mapped[List["Pings"]] = relationship(
+    conversations: Mapped[list["UserConversation"]] = relationship(back_populates="user")
+    sent_pings: Mapped[list["Pings"]] = relationship(
         back_populates="sender", foreign_keys="Pings.sender_id"
     )
-    received_pings: Mapped[List["Pings"]] = relationship(
+    received_pings: Mapped[list["Pings"]] = relationship(
         back_populates="recipient", foreign_keys="Pings.recipient_id"
     )
-    stories: Mapped[List["Stories"]] = relationship(back_populates="user")
-    contacts: Mapped[List["Contacts"]] = relationship(
+    stories: Mapped[list["Stories"]] = relationship(back_populates="user")
+    contacts: Mapped[list["Contacts"]] = relationship(
         back_populates="user", foreign_keys="Contacts.user_id"
     )
-    contacted_by: Mapped[List["Contacts"]] = relationship(
+    contacted_by: Mapped[list["Contacts"]] = relationship(
         back_populates="contact", foreign_keys="Contacts.contact_id"
+    )
+    avatar: Mapped["Media"] = relationship(
+        back_populates="user", foreign_keys="Media.user_id", uselist=False
     )
 
     created_at: Mapped[datetime] = mapped_column(default=get_datetime_UTC)
@@ -72,3 +76,4 @@ from src.infrastructure.database.models.pings import Pings
 from src.infrastructure.database.models.user_conversation import UserConversation
 from src.infrastructure.database.models.stories import Stories
 from src.infrastructure.database.models.contacts import Contacts
+from src.infrastructure.database.models.media import Media

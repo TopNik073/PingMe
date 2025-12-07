@@ -1,8 +1,7 @@
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.ext.asyncio import AsyncAttrs
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID
-import json
 
 
 def get_datetime_UTC() -> datetime:
@@ -15,7 +14,7 @@ class BaseModel(AsyncAttrs, DeclarativeBase):
     """Base class for inheritance new models"""
 
     repr_cols_num = 1
-    repr_cols = tuple()
+    repr_cols = ()
 
     def __repr__(self):
         """Relationships are not used in repr() because may lead to unexpected lazy loads"""

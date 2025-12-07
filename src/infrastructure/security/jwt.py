@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from typing import Any, Literal
 from jose import jwt
 from uuid import UUID
@@ -17,9 +17,9 @@ class JWTHandler:
         current_date = datetime.now()
         current_date: datetime = current_date.replace(tzinfo=None)
         if token_type == "access":
-            expires_delta = timedelta(seconds=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
+            expires_delta = timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
         else:
-            expires_delta = timedelta(seconds=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+            expires_delta = timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
 
         expires_at: datetime = current_date + expires_delta
 
@@ -42,19 +42,15 @@ class JWTHandler:
         )
 
     @staticmethod
-    def is_token_expired(token: str | dict) -> bool:
+    def is_token_expired(token: str | dict[str, Any]) -> bool:
         """Check if token is expired"""
         try:
-            if isinstance(token, str):
-                payload = JWTHandler.decode_token(token)
-            else:
-                payload = token
+            payload = JWTHandler.decode_token(token) if isinstance(token, str) else token
             exp = payload.get("exp")
             if not exp:
                 return True
 
-            # Сравниваем timestamp напрямую
-            return exp < int(datetime.now(timezone.utc).timestamp())
+            return exp < int(datetime.now(UTC).timestamp())
 
         except Exception:
             return True
@@ -67,5 +63,4 @@ class JWTHandler:
         if not exp:
             raise ValueError("Token has no expiration time")
 
-        # Конвертируем timestamp в datetime с UTC
-        return datetime.fromtimestamp(exp, tz=timezone.utc)
+        return datetime.fromtimestamp(exp, tz=UTC)

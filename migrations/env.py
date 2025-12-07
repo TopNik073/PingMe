@@ -25,11 +25,11 @@ load_dotenv()
 config = context.config
 
 section = config.config_ini_section
-config.set_section_option(section, "DB_NAME", os.getenv("DB_NAME"))
-config.set_section_option(section, "DB_USER", os.getenv("DB_USER"))
-config.set_section_option(section, "DB_PASS", os.getenv("DB_PASS"))
-config.set_section_option(section, "DB_HOST", os.getenv("DB_HOST"))
-config.set_section_option(section, "DB_PORT", os.getenv("DB_PORT"))
+config.set_section_option(section, "DB_NAME", os.getenv("DB_NAME", ""))
+config.set_section_option(section, "DB_USER", os.getenv("DB_USER", ""))
+config.set_section_option(section, "DB_PASS", os.getenv("DB_PASS", ""))
+config.set_section_option(section, "DB_HOST", os.getenv("DB_HOST", os.getenv("POSTGRES_HOST", "localhost")))
+config.set_section_option(section, "DB_PORT", os.getenv("DB_PORT", "5432"))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

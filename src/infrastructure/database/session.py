@@ -1,17 +1,17 @@
-from typing import AsyncGenerator, Annotated
+from typing import Annotated
+from collections.abc import AsyncGenerator
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     create_async_engine,
     async_sessionmaker,
-    AsyncEngine,
 )
 
 from src.core.config import settings
 
 engine = create_async_engine(
     settings.DATABASE_URL,
-    echo=True if settings.DEBUG or settings.SQLALCHEMY_ECHO else False,
+    echo=bool(settings.DEBUG and settings.SQLALCHEMY_ECHO),
     future=True,
 )
 
@@ -24,7 +24,7 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     """Dependency for getting a database session"""
     async with AsyncSessionLocal() as session:
         try:
@@ -37,4 +37,4 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
-DB_DEP = Annotated[AsyncEngine, Depends(get_db)]
+DB_DEP = Annotated[AsyncSession, Depends(get_db)]

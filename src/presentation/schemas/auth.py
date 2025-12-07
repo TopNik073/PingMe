@@ -1,4 +1,3 @@
-from datetime import datetime
 from pydantic import BaseModel, EmailStr
 from src.presentation.schemas.users import UserResponseSchema
 from src.presentation.schemas.tokens import JWTTokens, TokenVerifySchema

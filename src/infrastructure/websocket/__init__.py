@@ -1,0 +1,2 @@
+"""WebSocket infrastructure module"""
+

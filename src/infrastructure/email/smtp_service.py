@@ -1,4 +1,3 @@
-from typing import List
 import aiosmtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -34,13 +33,13 @@ class SMTPService(AbstractEmailService):
             await smtp.connect()
             await smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD.get_secret_value())
         except Exception as e:
-            logger.exception("Failed to connect with smtp", e)
+            logger.exception("Failed to connect with smtp: %s", e)
 
         return smtp
 
     @staticmethod
     def _create_message(
-        to_email: str | List[str],
+        to_email: str | list[str],
         subject: str,
         body: str,
     ) -> MIMEMultipart:
@@ -55,7 +54,7 @@ class SMTPService(AbstractEmailService):
         return message
 
     async def send_email(
-        self, to_email: str | List[str], subject: str, body: str
+        self, to_email: str | list[str], subject: str, body: str
     ) -> None:
         """Send email via SMTP"""
         message = self._create_message(to_email, subject, body)
@@ -66,7 +65,7 @@ class SMTPService(AbstractEmailService):
             await smtp.send_message(message)
             logger.debug("Email was sent")
         except Exception as e:
-            logger.exception(f"Fail to send email via SMTP to {to_email}", e)
+            logger.exception("Fail to send email via SMTP to %s: %s", to_email, e)
         finally:
             await smtp.quit()
 

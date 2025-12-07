@@ -18,6 +18,12 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        if request.url.path.startswith("/ws"):
+            return await call_next(request)
+
+        if "websocket" in request.headers.get("upgrade", "").lower():
+            return await call_next(request)
+
         context = await self.get_context(request)
         await logger.ainfo(
             f"Request started on {request.method} {request.url.path}", context=context
@@ -56,19 +62,23 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     def get_response_size(response: Response) -> int:
         try:
             response_size = response.headers.get("Content-Length")
-            response_size = int(response_size) if response_size else len(response.body)
+            if response_size:
+                return int(response_size)
 
-        except Exception as e:  # noqa: BLE001
+            if hasattr(response, 'body') and response.body is not None:
+                return len(response.body)
+
+            return 0
+
+        except Exception as e:
             logger.warning(
-                f"Error getting response size: {e}",
-                exc_info=e,
+                "Error getting response size: %s",
+                e,
             )
             return 0
-        else:
-            return response_size
 
     @staticmethod
-    async def create_final_log(
+    async def create_final_log(  # noqa: PLR0913
         msg: Literal["successful", "failed"],
         request: Request,
         context: dict,
@@ -93,8 +103,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     @staticmethod
     async def get_context(request: Request) -> dict[str, Any]:
         trace_id = str(uuid.uuid4())
+        content_type = request.headers.get('Content-Type', '')
         body = await request.body()
-        body = body.decode()
+        body = 'Not available for multipart/form-data' if 'multipart/form-data' in content_type else body.decode()
 
         return {
             "trace_id": trace_id,

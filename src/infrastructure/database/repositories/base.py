@@ -1,4 +1,5 @@
-from typing import Type, List, AsyncGenerator
+from typing import ClassVar
+from collections.abc import AsyncGenerator
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
@@ -8,16 +9,16 @@ from src.application.interfaces.repositories import AbstractRepository, MODEL_TY
 
 
 class SQLAlchemyRepository(AbstractRepository[MODEL_TYPE]):
-    model = type[MODEL_TYPE]
+    model: ClassVar[type[MODEL_TYPE]]
 
     def __init__(self, session: AsyncSession):
         self._session = session
 
-    async def get_transaction(self) -> AsyncGenerator[AsyncSessionTransaction, None]:
+    async def get_transaction(self) -> AsyncGenerator[AsyncSessionTransaction]:
         async with self._session.begin() as transaction:
             yield transaction
 
-    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
+    async def get_session(self) -> AsyncGenerator[AsyncSession]:
         yield self._session
 
     async def create(self, schema: PYDANTIC_TYPE) -> MODEL_TYPE:
@@ -41,7 +42,7 @@ class SQLAlchemyRepository(AbstractRepository[MODEL_TYPE]):
 
     async def get_by_filter(
         self, include_relations: list[str] | None = None, **filters
-    ) -> List[MODEL_TYPE] | None:
+    ) -> list[MODEL_TYPE]:
         """Get records by filters with optional related data loading"""
         query = select(self.model)
 
@@ -57,10 +58,10 @@ class SQLAlchemyRepository(AbstractRepository[MODEL_TYPE]):
         result = await self._session.execute(query)
         records = result.scalars().all()
 
-        return list(records) if records else None
+        return list(records) if records else []
 
     async def update(
-        self, id: UUID | None = None, data: PYDANTIC_TYPE | MODEL_TYPE = None
+        self, id: UUID | None = None, data: PYDANTIC_TYPE | MODEL_TYPE | None = None
     ) -> MODEL_TYPE | None:
         """
         Update record.
@@ -100,7 +101,7 @@ class SQLAlchemyRepository(AbstractRepository[MODEL_TYPE]):
             return False
 
         await self._session.delete(db_obj)
-        await self._session.commit()
+        await self.commit()
         return True
 
     async def get_paginated(
@@ -110,7 +111,7 @@ class SQLAlchemyRepository(AbstractRepository[MODEL_TYPE]):
         limit: int = 100,
         include_relations: list[str] | None = None,
         **filters,
-    ) -> List[MODEL_TYPE]:
+    ) -> dict[str, int | list[MODEL_TYPE]]:
         """Get paginated records with optional filters and related data loading"""
         query = select(self.model)
 
@@ -123,18 +124,44 @@ class SQLAlchemyRepository(AbstractRepository[MODEL_TYPE]):
         for key, value in filters.items():
             query = query.where(getattr(self.model, key) == value)
 
+        # Get total count before pagination
+        count_query = select(self.model)
+        for key, value in filters.items():
+            count_query = count_query.where(getattr(self.model, key) == value)
+        count_result = await self._session.execute(count_query)
+        total = len(count_result.scalars().all())
+
         # Add pagination
         query = query.offset(skip).limit(limit)
 
         result = await self._session.execute(query)
         records = result.scalars().all()
 
-        res = [
-            {
-                "total": len(records),
-                "page": skip // limit + 1,
-                "limit": limit,
-            }
-        ]
+        return {
+            "total": total,
+            "page": skip // limit + 1,
+            "limit": limit,
+            "items": list(records),
+        }
 
-        return res.append(records)
+    def add_object(self, obj: MODEL_TYPE) -> None:
+        """Add an object to the session without committing"""
+        self._session.add(obj)
+
+    async def flush(self) -> None:
+        """Flush pending changes to the database without committing"""
+        await self._session.flush()
+
+    async def commit(self) -> None:
+        """Commit the current transaction"""
+        await self._session.commit()
+
+    async def refresh(
+        self, obj: MODEL_TYPE, attribute_names: list[str] | None = None
+    ) -> None:
+        """Refresh an object from the database, optionally loading specific relationships"""
+        await self._session.refresh(obj, attribute_names)
+
+    async def rollback(self) -> None:
+        """Rollback the current transaction"""
+        await self._session.rollback()

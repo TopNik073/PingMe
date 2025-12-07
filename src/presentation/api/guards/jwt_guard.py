@@ -22,10 +22,7 @@ def verify_token(payload: dict) -> bool:
     if jwt_handler.is_token_expired(payload):
         return False
 
-    if payload.get("sub") is None:
-        return False
-
-    return True
+    return payload.get("sub") is not None
 
 
 async def get_current_user(
@@ -54,4 +51,4 @@ async def get_current_user(
         return raise_unauthorized_error()
 
 
-current_user_dep = Annotated[Users, Depends(get_current_user)]
+CURRENT_USER_DEP = Annotated[Users, Depends(get_current_user)]
