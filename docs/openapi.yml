@@ -1,0 +1,898 @@
+openapi: 3.1.0
+x-stoplight:
+  id: jck8ev4k0i1b0
+info:
+  title: PingMe
+  version: '1.0'
+  summary: PingMe API specifications
+servers:
+  - url: 'http://{local_host}:{local_port}'
+    variables:
+      local_host:
+        default: localhost
+        description: URL of host machine
+      local_port:
+        default: '8000'
+        description: Host machine port
+paths:
+  /api/v1/auth/register:
+    post:
+      summary: Registration start flow
+      tags:
+        - auth
+      responses:
+        '200':
+          $ref: '#/components/responses/RegisterResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+      operationId: post-api-v1-auth-register
+      x-stoplight:
+        id: pl9qc9hsnsggm
+      description: Start registration flow
+      requestBody:
+        $ref: '#/components/requestBodies/RegisterRequest'
+  /api/v1/auth/verify-registration:
+    parameters: []
+    post:
+      summary: Registration confirmation
+      tags:
+        - auth
+      responses:
+        '200':
+          $ref: '#/components/responses/RegisterVerifyResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+      operationId: post-api-v1-auth-verify-registration
+      x-stoplight:
+        id: u7ij5rgkbveh1
+      description: Confirm registration via token (token is sending to email)
+      requestBody:
+        $ref: '#/components/requestBodies/RegisterVerifyRequest'
+  /api/v1/auth/login:
+    post:
+      summary: Login start flow
+      tags:
+        - auth
+      responses:
+        '200':
+          $ref: '#/components/responses/LoginResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+      operationId: post-api-v1-auth-login
+      x-stoplight:
+        id: 572bacoth787a
+      description: Start login flow
+      requestBody:
+        $ref: '#/components/requestBodies/LoginRequest'
+  /api/v1/auth/verify-login:
+    post:
+      summary: Login confirmation
+      tags:
+        - auth
+      responses:
+        '200':
+          $ref: '#/components/responses/LoginVerifyResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+      operationId: post-api-v1-auth-verify-login
+      x-stoplight:
+        id: 5q5deu5cog26h
+      requestBody:
+        $ref: '#/components/requestBodies/LoginVerifyRequest'
+  /api/v1/auth/reset-password:
+    post:
+      summary: Reset password start flow
+      tags:
+        - auth
+      responses:
+        '200':
+          $ref: '#/components/responses/ResetPasswordResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+      operationId: post-api-v1-auth-reset-password
+      x-stoplight:
+        id: rwf26iecl5lxh
+      requestBody:
+        $ref: '#/components/requestBodies/ResetPasswordRequest'
+  /api/v1/auth/verify-reset-password:
+    post:
+      summary: Reset password confirmation
+      tags:
+        - auth
+      responses:
+        '200':
+          $ref: '#/components/responses/ResetPasswaordVerifyResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+      operationId: post-api-v1-auth-verify-reset-password
+      x-stoplight:
+        id: 1th75rmpnqnu6
+      requestBody:
+        $ref: '#/components/requestBodies/ResetPassswordVerifyRequest'
+  /api/v1/auth/refresh:
+    post:
+      summary: Refresh credentials
+      tags:
+        - auth
+      responses:
+        '200':
+          $ref: '#/components/responses/RefreshTokenResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+      operationId: post-api-v1-auth-refresf
+      x-stoplight:
+        id: 4cyvkv9coo221
+      requestBody:
+        $ref: '#/components/requestBodies/RefreshTokenRequest'
+    parameters: []
+  /api/v1/auth/verify-token:
+    post:
+      summary: Verify token
+      tags:
+        - auth
+      responses:
+        '200':
+          $ref: '#/components/responses/VerifyTokenResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+      operationId: post-api-v1-auth-verify-token
+      x-stoplight:
+        id: fmp6phnq052wg
+      requestBody:
+        $ref: '#/components/requestBodies/VerifyTokenRequest'
+components:
+  schemas:
+    SuccessResponseSchema:
+      title: SuccessResponseSchema
+      x-stoplight:
+        id: d9m1u6tg78d74
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          x-stoplight:
+            id: jzhflt8el2xaw
+          default: true
+        message:
+          type: string
+          x-stoplight:
+            id: z8ho1nln7o1ij
+        error:
+          type:
+            - string
+            - 'null'
+          x-stoplight:
+            id: wcqumufb7glu4
+      examples:
+        - success: true
+          message: Successfully register new user
+          error: null
+    ValidationErrorSchema:
+      title: ValidationErrorSchema
+      x-stoplight:
+        id: fjf5i72qitozy
+      type: object
+      properties:
+        detail:
+          type: array
+          x-stoplight:
+            id: ibw9p2s922ti7
+          items: {}
+      description: ''
+      examples:
+        - detail:
+            - loc:
+                - string
+                - number
+              msg: string
+              type: string
+    UserBaseSchema:
+      title: UserBaseSchema
+      x-stoplight:
+        id: 7c9xvhkakkdyu
+      type: object
+      description: Basic user's schema
+      examples:
+        - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
+          email: user@example.com
+          name: string
+          username: string
+          phone_number: string
+          is_online: true
+          is_verified: true
+          auth_provider: manual
+          mailing_method: email
+          created_at: '2019-08-24T14:15:22Z'
+          updated_at: '2019-08-24T14:15:22Z'
+      x-tags:
+        - base
+        - entity
+      required:
+        - id
+        - email
+        - name
+        - username
+        - phone_number
+        - is_online
+        - is_verified
+        - auth_provider
+        - mailing_method
+        - created_at
+      properties:
+        id:
+          type: string
+          x-stoplight:
+            id: 0lmkjohq4otvu
+          format: uuid
+        email:
+          type: string
+          x-stoplight:
+            id: dgl7yyv60fvmk
+          format: email
+        name:
+          type: string
+          x-stoplight:
+            id: 0gb1lrsz5nems
+        username:
+          type: string
+          x-stoplight:
+            id: 9uyohvsbqnj8s
+        phone_number:
+          type: string
+          x-stoplight:
+            id: 2v9i1g4s9msiw
+        is_online:
+          type: boolean
+          x-stoplight:
+            id: r07iqoy9mp79a
+        is_verified:
+          type: boolean
+          x-stoplight:
+            id: 7i03b0ig7c275
+        auth_provider:
+          $ref: '#/components/schemas/AuthProvidersEnum'
+          x-stoplight:
+            id: 7she7o4y0todr
+        mailing_method:
+          $ref: '#/components/schemas/MailingMethodsEnum'
+          x-stoplight:
+            id: pvlojtpa019l3
+        created_at:
+          type: string
+          x-stoplight:
+            id: hqtnnpiy5kwr8
+          format: date-time
+        updated_at:
+          type: string
+          x-stoplight:
+            id: onk1al3bs538k
+          format: date-time
+    TokensBaseSchema:
+      title: TokensBaseSchema
+      x-stoplight:
+        id: 11ma89m6lnujj
+      type: object
+      examples:
+        - access:
+            token: string
+            expires_at: '2019-08-24T14:15:22Z'
+          refresh:
+            token: string
+            expires_at: '2019-08-24T14:15:22Z'
+      x-tags:
+        - auth
+        - base
+      required:
+        - access
+        - refresh
+      properties:
+        access:
+          type: object
+          x-stoplight:
+            id: wdpxpqxcqiw4s
+          required:
+            - token
+            - expires_at
+          properties:
+            token:
+              type: string
+              x-stoplight:
+                id: o915b8o53xogg
+            expires_at:
+              type: string
+              x-stoplight:
+                id: 0qghq0d9eojmm
+              format: date-time
+        refresh:
+          type: object
+          x-stoplight:
+            id: 5z8dt8fiq0rph
+          required:
+            - token
+            - expires_at
+          properties:
+            token:
+              type: string
+              x-stoplight:
+                id: uo7xmayzqmpq2
+            expires_at:
+              type: string
+              x-stoplight:
+                id: 419ljxshalci2
+              format: date-time
+    TokenTypesEnum:
+      title: TokenTypesEnum
+      x-stoplight:
+        id: 28fyt1aap1znf
+      enum:
+        - access
+        - refresh
+    AuthProvidersEnum:
+      title: AuthProvidersEnum
+      x-stoplight:
+        id: 5vkp8k17qckdt
+      enum:
+        - manual
+        - google
+      description: Auth Providers Variants
+      x-tags:
+        - auth
+        - enum
+    MailingMethodsEnum:
+      title: MailingMethodsEnum
+      x-stoplight:
+        id: i2bacwr51p5s7
+      enum:
+        - email
+        - sms
+      description: ''
+      x-tags:
+        - enum
+    AuthRequestSchema:
+      title: AuthRequestSchema
+      x-stoplight:
+        id: qmtmdd5offyxs
+      type: object
+      examples:
+        - email: user@example.com
+          password: pa$$word
+      x-tags:
+        - auth
+        - request
+      description: Schema to start auth flow (register or login)
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          x-stoplight:
+            id: 106p3rr9bsb6k
+          format: email
+        password:
+          type: string
+          x-stoplight:
+            id: qlsjxypqwwmqj
+          format: password
+    AuthResponseSchema:
+      title: AtuhResponseData
+      x-stoplight:
+        id: 2cdnujmk8occ1
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          x-stoplight:
+            id: m2ddw4fksovvi
+          format: email
+          example: john@example.com
+      x-tags:
+        - auth
+    AuthVerifyRequestSchema:
+      title: AuthVerifyRequestSchema
+      x-stoplight:
+        id: lepc5nq6h502o
+      allOf:
+        - type: object
+          required:
+            - token
+          properties:
+            token:
+              type: string
+              x-stoplight:
+                id: s4jx6r5bebm4r
+              minLength: 6
+              maxLength: 6
+              example: '123456'
+        - $ref: '#/components/schemas/AuthRequestSchema'
+          x-stoplight:
+            id: 7rdpgnqmz1jor
+      examples:
+        - token: '123456'
+          email: user@example.com
+          password: pa$$word
+      x-tags:
+        - auth
+        - request
+      description: Schema to complete auth flow
+    AuthVerifyResponseSchema:
+      title: AuthVerifyResponseSchema
+      x-stoplight:
+        id: nq6391dsrn0m5
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponseSchema'
+        - type: object
+          x-stoplight:
+            id: 1tpk9cz08zhrd
+          required:
+            - data
+          properties:
+            data:
+              x-stoplight:
+                id: ucsfjkvyoesvu
+              type: object
+              required:
+                - user
+                - tokens
+              properties:
+                user:
+                  $ref: '#/components/schemas/UserBaseSchema'
+                  x-stoplight:
+                    id: svg4e691em9hi
+                tokens:
+                  $ref: '#/components/schemas/TokensBaseSchema'
+                  x-stoplight:
+                    id: 929qm4xbt4kzl
+      examples:
+        - success: true
+          message: string
+          data:
+            user:
+              id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+              email: user@example.com
+              name: string
+              username: string
+              phone_number: string
+              is_online: false
+              is_verified: false
+              auth_provider: manual
+              mailing_method: email
+              created_at: '2025-06-03T11:05:16.427Z'
+              updated_at: '2025-06-03T11:05:16.428Z'
+            tokens:
+              access:
+                token: string
+                expires_at: '2025-06-03T11:05:16.428Z'
+              refresh:
+                token: string
+                expires_at: '2025-06-03T11:05:16.428Z'
+          error: string
+      x-tags:
+        - auth
+        - response
+      description: Response schema to complete auth flow
+    VerifyTokenResponseSchema:
+      title: VerifyTokenResponse
+      x-stoplight:
+        id: m9mbsym7gszzk
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponseSchema'
+        - type: object
+          x-stoplight:
+            id: wu7lsw5nx26vv
+          required:
+            - data
+          properties:
+            data:
+              type: object
+              x-stoplight:
+                id: xju91u7ji4uxg
+              required:
+                - user
+                - token
+              properties:
+                user:
+                  $ref: '#/components/schemas/UserBaseSchema'
+                  x-stoplight:
+                    id: 8f8bx16vktdck
+                token:
+                  type: object
+                  x-stoplight:
+                    id: k40t5yerrh2lw
+                  required:
+                    - token
+                    - expires_at
+                    - token_type
+                  properties:
+                    token:
+                      type: string
+                      x-stoplight:
+                        id: stwyo1rrfsa3u
+                    expires_at:
+                      type: string
+                      x-stoplight:
+                        id: 7bm2jkmx5kmcc
+                      format: date-time
+                    token_type:
+                      $ref: '#/components/schemas/TokenTypesEnum'
+                      x-stoplight:
+                        id: 688u2ajfv1dcx
+    RefreshTokenResponseSchema:
+      title: RefreshTokenResponse
+      x-stoplight:
+        id: ii6c2d4b5qu6z
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponseSchema'
+        - type: object
+          x-stoplight:
+            id: 3rix63k8w33qz
+          required:
+            - data
+          properties:
+            data:
+              $ref: '#/components/schemas/TokensBaseSchema'
+              x-stoplight:
+                id: qdoa9163o4gu4
+      examples:
+        - success: true
+          message: Successfully register new user
+          error: null
+          data:
+            access:
+              token: string
+              expires_at: '2019-08-24T14:15:22Z'
+            refresh:
+              token: string
+              expires_at: '2019-08-24T14:15:22Z'
+  securitySchemes: {}
+  requestBodies:
+    RegisterRequest:
+      content:
+        application/json:
+          schema:
+            allOf:
+              - type: object
+                required:
+                  - name
+                properties:
+                  name:
+                    type: string
+                    x-stoplight:
+                      id: 11g5vbe32aebn
+              - $ref: '#/components/schemas/AuthRequestSchema'
+                x-stoplight:
+                  id: cqvc686dgwahc
+          examples:
+            Example 1:
+              value:
+                email: john@example.com
+                password: '123456'
+                name: John
+      description: Request to start registration flow
+    RegisterVerifyRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthVerifyRequestSchema'
+          examples:
+            Example 1:
+              value:
+                token: '123456'
+                email: user@example.com
+                password: pa$$word
+      description: Request to confirm a register flow
+    LoginRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthRequestSchema'
+          examples:
+            Example 1:
+              value:
+                email: user@example.com
+                password: pa$$word
+    LoginVerifyRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthVerifyRequestSchema'
+          examples:
+            Example 1:
+              value:
+                token: '123456'
+                email: user@example.com
+                password: pa$$word
+    ResetPasswordRequest:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              email:
+                type: string
+                x-stoplight:
+                  id: 9o9pb8y24pjga
+                format: email
+          examples:
+            Example 1:
+              value:
+                email: user@example.com
+    ResetPassswordVerifyRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthVerifyRequestSchema'
+          examples:
+            Example 1:
+              value:
+                token: '123456'
+                email: user@example.com
+                password: pa$$word
+    VerifyTokenRequest:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              token:
+                type: string
+                x-stoplight:
+                  id: mnj9w7khd9c5w
+          examples:
+            Example 1:
+              value:
+                token: string
+    RefreshTokenRequest:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              refresh_token:
+                type: string
+                x-stoplight:
+                  id: qmq7pqufrwnr5
+          examples:
+            Example 1:
+              value:
+                refresh_token: string
+  responses:
+    RegisterResponse:
+      description: Register start flow response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessResponseSchema'
+                x-stoplight:
+                  id: jrt9xbrm2a948
+              - x-stoplight:
+                  id: w6pg8o0333bfp
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AuthResponseSchema'
+                    x-stoplight:
+                      id: twbyxoqn62s70
+          examples:
+            Example 1:
+              value:
+                success: true
+                message: Successfully register new user
+                error: null
+                data:
+                  email: john@example.com
+    ValidationErrorResponse:
+      description: This is an automatic server response when validation fails.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorSchema'
+          examples:
+            Example 1:
+              value:
+                detail:
+                  - loc:
+                      - string
+                      - number
+                    msg: string
+                    type: string
+    RegisterVerifyResponse:
+      description: ''
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthVerifyResponseSchema'
+          examples:
+            Example 1:
+              value:
+                success: true
+                message: string
+                data:
+                  user:
+                    id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                    email: user@example.com
+                    name: string
+                    username: string
+                    phone_number: string
+                    is_online: false
+                    is_verified: false
+                    auth_provider: manual
+                    mailing_method: email
+                    created_at: '2025-06-03T11:05:16.427Z'
+                    updated_at: '2025-06-03T11:05:16.428Z'
+                  tokens:
+                    access:
+                      token: string
+                      expires_at: '2025-06-03T11:05:16.428Z'
+                    refresh:
+                      token: string
+                      expires_at: '2025-06-03T11:05:16.428Z'
+                error: string
+    LoginResponse:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessResponseSchema'
+                x-stoplight:
+                  id: w7kqpbdetol5g
+              - type: object
+                x-stoplight:
+                  id: yryjfd6ibhvnw
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AuthResponseSchema'
+                    x-stoplight:
+                      id: brluxwmp94x8r
+          examples:
+            Example 1:
+              value:
+                success: true
+                message: Token was sent via email
+                error: null
+                data:
+                  email: john@example.com
+    LoginVerifyResponse:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthVerifyResponseSchema'
+          examples:
+            Example 1:
+              value:
+                success: true
+                message: Successfully login
+                data:
+                  user:
+                    id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
+                    email: user@example.com
+                    name: string
+                    username: string
+                    phone_number: string
+                    is_online: true
+                    is_verified: true
+                    auth_provider: manual
+                    mailing_method: email
+                    created_at: '2019-08-24T14:15:22Z'
+                    updated_at: '2019-08-24T14:15:22Z'
+                  tokens:
+                    access:
+                      token: string
+                      expires_at: '2019-08-24T14:15:22Z'
+                    refresh:
+                      token: string
+                      expires_at: '2019-08-24T14:15:22Z'
+                error: null
+    ResetPasswordResponse:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessResponseSchema'
+                x-stoplight:
+                  id: ipsckbp9rbuoc
+              - type: object
+                x-stoplight:
+                  id: nkb6jdj6o5mdg
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AuthResponseSchema'
+                    x-stoplight:
+                      id: ta1uijyor7uzc
+          examples:
+            Example 1:
+              value:
+                success: true
+                message: Email was sent to your email
+                error: null
+                data:
+                  email: john@example.com
+    ResetPasswaordVerifyResponse:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthVerifyResponseSchema'
+          examples:
+            Example 1:
+              value:
+                success: true
+                message: Successfully register new user
+                data:
+                  user:
+                    id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
+                    email: user@example.com
+                    name: string
+                    username: string
+                    phone_number: string
+                    is_online: true
+                    is_verified: true
+                    auth_provider: manual
+                    mailing_method: email
+                    created_at: '2019-08-24T14:15:22Z'
+                    updated_at: '2019-08-24T14:15:22Z'
+                  tokens:
+                    access:
+                      token: string
+                      expires_at: '2019-08-24T14:15:22Z'
+                    refresh:
+                      token: string
+                      expires_at: '2019-08-24T14:15:22Z'
+                error: null
+    VerifyTokenResponse:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VerifyTokenResponseSchema'
+          examples:
+            Example 1:
+              value:
+                success: true
+                message: Token successfully proceed
+                error: null
+                data:
+                  user:
+                    id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
+                    email: user@example.com
+                    name: string
+                    username: string
+                    phone_number: string
+                    is_online: true
+                    is_verified: true
+                    auth_provider: manual
+                    mailing_method: email
+                    created_at: '2019-08-24T14:15:22Z'
+                    updated_at: '2019-08-24T14:15:22Z'
+                  token:
+                    token: string
+                    expires_at: '2019-08-24T14:15:22Z'
+                    token_type: access
+    RefreshTokenResponse:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RefreshTokenResponseSchema'
+          examples:
+            Example 1:
+              value:
+                success: true
+                message: Successfully register new user
+                error: null
+                data:
+                  access:
+                    token: string
+                    expires_at: '2019-08-24T14:15:22Z'
+                  refresh:
+                    token: string
+                    expires_at: '2019-08-24T14:15:22Z'

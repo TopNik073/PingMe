@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar, Generic
+from typing import TypeVar
 from pydantic import BaseModel
 from src.core.config import settings
 
 CacheType = TypeVar("CacheType", bound=BaseModel)
 
-class AbstractCache(ABC, Generic[CacheType]):
+class AbstractCache[CacheType](ABC):
     """Abstract cache interface for Pydantic models"""
     
     @abstractmethod
@@ -22,6 +22,8 @@ class AbstractCache(ABC, Generic[CacheType]):
     ) -> None:
         """
         Set value to cache
+        :param key: Key of value to set:
+        :param value: Value to set:
         :param expire: Time in seconds for key to expire
         """
         raise NotImplementedError

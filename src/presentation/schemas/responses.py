@@ -1,10 +1,10 @@
-from typing import Generic, TypeVar, Any
+from typing import TypeVar
 from pydantic import BaseModel
 
 DataT = TypeVar("DataT")
 
 
-class ResponseModel(BaseModel, Generic[DataT]):
+class ResponseModel[DataT](BaseModel):
     """Base response model"""
 
     success: bool
@@ -22,7 +22,7 @@ class ErrorResponse(BaseModel):
     data: None = None
 
 
-class SuccessResponse(BaseModel, Generic[DataT]):
+class SuccessResponse[DataT](BaseModel):
     """Success response model"""
 
     success: bool = True
@@ -31,17 +31,27 @@ class SuccessResponse(BaseModel, Generic[DataT]):
     error: None = None
 
 
-def response_success(
-    data: Any,
+def response_success[DataT](
+    data: DataT,
     message: str | None = None,
-) -> dict:
+) -> ResponseModel[DataT]:
     """Create success response"""
-    return {"success": True, "message": message, "data": data, "error": None}
+    return ResponseModel(
+        success=True,
+        message=message,
+        data=data,
+        error=None,
+    ).model_dump()
 
 
 def response_error(
     error: str,
     message: str | None = None,
-) -> dict:
+) -> ResponseModel[None]:
     """Create error response"""
-    return {"success": False, "message": message, "data": None, "error": error}
+    return ResponseModel(
+        success=False,
+        message=message,
+        error=error,
+        data=None,
+    ).model_dump()

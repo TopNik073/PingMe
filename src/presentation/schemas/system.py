@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Any
 from pydantic import BaseModel, Field
 from datetime import datetime
 import psutil
@@ -10,7 +10,7 @@ class ServiceStatus(BaseModel):
     status: str = "ok"
     latency_ms: float | None = None
     version: str | None = None
-    details: Dict[str, Any] | None = None
+    details: dict[str, Any] | None = None
 
 class HealthResponse(BaseModel):
     status: str = "ok"
@@ -22,7 +22,7 @@ class HealthResponse(BaseModel):
 
     database: ServiceStatus
     redis: ServiceStatus
-    system: Dict[str, Any] = Field(
+    system: dict[str, Any] = Field(
         default_factory=lambda: {
             "cpu_usage": psutil.cpu_percent(),
             "memory_usage": psutil.virtual_memory().percent,

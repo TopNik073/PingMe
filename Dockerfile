@@ -1,33 +1,31 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS base
 
-WORKDIR /app
+ENV PYTHONFAULTHANDLER=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DEFAULT_TIMEOUT=100 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONPATH=/app_dir/src
+RUN apt-get update && \
+    apt-get install --yes --no-install-recommends netcat-openbsd && \
+    rm -rf /var/lib/apt/lists/*
+WORKDIR /app_dir
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    netcat-traditional \
-    && rm -rf /var/lib/apt/lists/*
+FROM base AS builder
 
-# Install dependencies for psycopg2
-RUN apt-get update && apt-get install -y \
-    libpq-dev \
-    gcc \
-    python3-dev
+RUN pip install --upgrade "uv>=0.6,<1.0" && rm -rf /root/.cache/*
+ADD pyproject.toml uv.lock ./
+RUN uv sync --locked --no-install-project --verbose --no-progress
 
-# Create logs directory with proper permissions
-RUN mkdir -p /app/logs && chmod 777 /app/logs
+FROM base AS final
 
-# Copy the requirements file
-COPY requirements.txt .
-
-# Install dependencies
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
-
-# Copy the source code
-COPY . .
+RUN pip install --upgrade "uv>=0.6,<1.0"
+COPY --from=builder /app_dir/.venv ./.venv
+COPY src/ ./src
+COPY alembic.ini ./
+COPY migrations/ ./migrations/
 
 # Run migrations and start the application
 CMD while ! nc -z db 5432; do sleep 0.1; done && \
-    alembic upgrade head && \
-    uvicorn main:app --host 0.0.0.0 --port 8000 
+    ./.venv/bin/alembic upgrade head && \
+    ./.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 

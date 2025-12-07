@@ -3,14 +3,19 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 from src.core.config import settings
-from src.core.logging import init_logging, get_logger
+from src.core.logging import get_logger
+from src.presentation.middlewares.logging import RequestLoggingMiddleware
+from src.core.startup import initialize_fcm_service
 from src.infrastructure.database.session import engine
 from src.infrastructure.cache.redis.connection import init_redis_pool, close_redis_pool
+
+# ROUTERS
 from src.presentation.api.system.router import router as system_router
 from src.presentation.api.v1 import V1_ROUTER
+from src.presentation.middlewares.ws_logging import WebSocketLoggingMiddleware
 
 logger = get_logger(__name__)
 
@@ -22,9 +27,13 @@ async def lifespan(app: FastAPI):
 
     # Initialize connections to the database and Redis
     app.state.redis = await init_redis_pool()
-    app.state.start_time = datetime.now(timezone.utc)
+    app.state.start_time = datetime.now(UTC)
 
-    logger.info("Application started successfully")
+    # Initialize FCM service
+    await initialize_fcm_service(app)
+
+    docs_route = f"http://{settings.APP_HOST}:{settings.APP_PORT}/docs"
+    logger.info("Application started successfully. See docs here %s", docs_route)
     yield
 
     # Shutdown
@@ -39,19 +48,20 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG, lifespan=lifespan)
 
-# Initialize logging
-init_logging(app)
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Setup service middlewares
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(WebSocketLoggingMiddleware)
 
-# Here we will connect the routers
+# Connect routers
 app.include_router(V1_ROUTER)
 app.include_router(system_router)
 
@@ -59,4 +69,6 @@ app.include_router(system_router)
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run(
+        "main:app", host=settings.APP_HOST, port=settings.APP_PORT, reload=False, log_level=40
+    )

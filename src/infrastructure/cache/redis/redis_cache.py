@@ -1,24 +1,25 @@
-from typing import TypeVar, Type, Dict, Any, Generic, Union
+from typing import TypeVar, Any, cast
 from redis.asyncio import Redis
 from pydantic import BaseModel
 from sqlalchemy.orm import DeclarativeBase
 import json
 
-from src.application.interfaces.cache import AbstractCache, CacheType
+from src.application.interfaces.cache import AbstractCache
 from src.core.config import settings
 
 T = TypeVar('T')
 
-class RedisCache(AbstractCache[CacheType], Generic[T, CacheType]):
+# CacheType is a type parameter, not a regular import
+class RedisCache[CacheType](AbstractCache[CacheType]):
     """
     Universal class for caching in Redis
     Supports working with Pydantic models, SQLAlchemy models and primitive types
     """
-    def __init__(self, redis_client: Redis, model_type: Type[Union[T, CacheType]] = None):
+    def __init__(self, redis_client: Redis, model_type: type[CacheType] | None = None):
         self._redis = redis_client
         self._model_type = model_type
 
-    async def get(self, key: str) -> Union[T, CacheType]:
+    async def get(self, key: str) -> CacheType | None:
         """Get value from cache"""
         value = await self._redis.get(key)
         if value is None:
@@ -26,18 +27,18 @@ class RedisCache(AbstractCache[CacheType], Generic[T, CacheType]):
             
         # If type is not specified, return string
         if self._model_type is None:
-            return value.decode('utf-8')  # type: ignore
+            return cast(CacheType, value.decode('utf-8'))
             
         # If type is Pydantic model
         if issubclass(self._model_type, BaseModel):
-            return self._model_type.model_validate_json(value)  # type: ignore
+            return cast(CacheType, self._model_type.model_validate_json(value))
             
         # If this is a primitive type
         try:
             data = json.loads(value)
-            return data  # type: ignore
-        except:
-            return value.decode('utf-8')  # type: ignore
+            return cast(CacheType, data)
+        except Exception:
+            return cast(CacheType, value.decode('utf-8'))
 
     async def set(
         self, key: str, value: Any, expire: int = settings.CACHE_TTL
@@ -88,7 +89,7 @@ class RedisCache(AbstractCache[CacheType], Generic[T, CacheType]):
         """Check if key exists in cache"""
         return await self._redis.exists(key) > 0
         
-    async def get_dict(self, key: str) -> Dict[str, Any]:
+    async def get_dict(self, key: str) -> dict[str, Any] | None:
         """Get dictionary from cache"""
         value = await self._redis.get(key)
         if value is None:

@@ -1,4 +1,3 @@
-from typing import List
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
@@ -17,10 +16,13 @@ class Conversations(BaseModel):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False
     )
 
-    name: Mapped[str] = mapped_column(nullable=False)
+    name: Mapped[str] = mapped_column(nullable=True)
 
-    users: Mapped[List["UserConversation"]] = relationship(back_populates="conversation")
-    messages: Mapped[List["Messages"]] = relationship(back_populates="conversation")
+    users: Mapped[list["UserConversation"]] = relationship(back_populates="conversation")
+    messages: Mapped[list["Messages"]] = relationship(back_populates="conversation")
+    avatar: Mapped["Media"] = relationship(
+        back_populates="conversation", foreign_keys="Media.conversation_id", uselist=False
+    )
 
     conversation_type: Mapped[ConversationType] = mapped_column(
         Enum(ConversationType, name="conversation_type", create_constraint=True),
@@ -37,3 +39,4 @@ class Conversations(BaseModel):
 
 from src.infrastructure.database.models.user_conversation import UserConversation
 from src.infrastructure.database.models.messages import Messages
+from src.infrastructure.database.models.media import Media

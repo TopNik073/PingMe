@@ -45,6 +45,7 @@ class UserConversation(BaseModel):
 
     __table_args__ = (
         Index('ix_user_conversation_user_id', 'user_id'),
+        Index('ix_user_conversation_conv_last_read', 'conversation_id', 'last_read_message_id'),
     )
 
 from src.infrastructure.database.models.users import Users

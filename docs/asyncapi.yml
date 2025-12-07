@@ -1,0 +1,664 @@
+asyncapi: '3.0.0'
+info:
+  title: PingMe WebSocket API
+  version: '0.0.1'
+  description: |
+    WebSocket API for PingMe messenger real-time communication.
+    
+    All messages are JSON format with a 'type' field indicating the message type.
+    
+    Protocol:
+    - Client connects to WebSocket endpoint
+    - Authenticates via token (auth message)
+    - Receives auth_success message on successful authentication
+    - Can send/receive messages, typing indicators, etc.
+    - Server sends pong in response to ping (heartbeat)
+
+servers:
+  development:
+    host: localhost:8000/api/v1/ws
+    protocol: ws
+    description: Development WebSocket server
+
+defaultContentType: application/json
+
+
+operations:
+  receiveMessage:
+    action: receive
+    title: Receive Message from Client
+    description: Receive messages from client (auth, message, typing, etc.)
+    channel:
+      $ref: '#/channels/ws'
+    messages:
+      - $ref: '#/channels/ws/messages/auth'
+      - $ref: '#/channels/ws/messages/message'
+      - $ref: '#/channels/ws/messages/message_edit'
+      - $ref: '#/channels/ws/messages/message_delete'
+      - $ref: '#/channels/ws/messages/message_forward'
+      - $ref: '#/channels/ws/messages/typing_start'
+      - $ref: '#/channels/ws/messages/typing_stop'
+      - $ref: '#/channels/ws/messages/ping'
+
+  sendMessage:
+    action: send
+    title: Send Message to Client
+    description: Send messages to client (notifications, responses, etc.)
+    channel:
+      $ref: '#/channels/ws'
+    messages:
+      - $ref: '#/channels/ws/messages/message_received'
+      - $ref: '#/channels/ws/messages/message_edited'
+      - $ref: '#/channels/ws/messages/message_deleted'
+      - $ref: '#/channels/ws/messages/message_forwarded'
+      - $ref: '#/channels/ws/messages/typing_indicator'
+      - $ref: '#/channels/ws/messages/user_online'
+      - $ref: '#/channels/ws/messages/user_offline'
+      - $ref: '#/channels/ws/messages/pong'
+      - $ref: '#/channels/ws/messages/auth_success'
+      - $ref: '#/channels/ws/messages/error'
+
+channels:
+  ws:
+    address: /ws
+    title: WebSocket Connection
+    description: Main WebSocket connection endpoint
+    messages:
+      # Incoming messages (Client -> Server)
+      auth:
+        $ref: '#/components/messages/WSAuthMessage'
+      message:
+        $ref: '#/components/messages/WSMessageCreate'
+      message_edit:
+        $ref: '#/components/messages/WSMessageEdit'
+      message_delete:
+        $ref: '#/components/messages/WSMessageDelete'
+      message_forward:
+        $ref: '#/components/messages/WSMessageForward'
+      typing_start:
+        $ref: '#/components/messages/WSTypingStart'
+      typing_stop:
+        $ref: '#/components/messages/WSTypingStop'
+      ping:
+        $ref: '#/components/messages/WSPing'
+
+      # Outgoing messages (Server -> Client)
+      message_received:
+        $ref: '#/components/messages/WSMessageReceived'
+      message_edited:
+        $ref: '#/components/messages/WSMessageEdited'
+      message_deleted:
+        $ref: '#/components/messages/WSMessageDeleted'
+      message_forwarded:
+        $ref: '#/components/messages/WSMessageForwarded'
+      typing_indicator:
+        $ref: '#/components/messages/WSTypingIndicator'
+      user_online:
+        $ref: '#/components/messages/WSUserOnline'
+      user_offline:
+        $ref: '#/components/messages/WSUserOffline'
+      pong:
+        $ref: '#/components/messages/WSPong'
+      auth_success:
+        $ref: '#/components/messages/WSAuthSuccess'
+      error:
+        $ref: '#/components/messages/WSError'
+
+components:
+  schemas:
+    UUID:
+      type: string
+      format: uuid
+      description: UUID identifier
+      example: "123e4567-e89b-12d3-a456-426614174000"
+
+    DateTime:
+      type: string
+      format: date-time
+      description: ISO 8601 datetime
+      example: "2024-01-15T10:30:00Z"
+
+    MediaItem:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        content_type:
+          type: string
+          example: "image/jpeg"
+        url:
+          type: string
+          format: uri
+          example: "https://storage.example.com/media/123.jpg"
+        size:
+          type: integer
+          example: 1024000
+        message_id:
+          $ref: '#/components/schemas/UUID'
+        created_at:
+          $ref: '#/components/schemas/DateTime'
+        updated_at:
+          $ref: '#/components/schemas/DateTime'
+
+    # Incoming message payloads
+    WSAuthMessagePayload:
+      type: object
+      required: [type, token]
+      properties:
+        type:
+          type: string
+          enum: [auth]
+        token:
+          type: string
+          description: JWT access token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    WSMessageCreatePayload:
+      type: object
+      required: [type, conversation_id, content]
+      properties:
+        type:
+          type: string
+          enum: [message]
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+        content:
+          type: string
+          minLength: 1
+          description: Message content
+        forwarded_from_id:
+          $ref: '#/components/schemas/UUID'
+          description: Original message ID if forwarding
+        media_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/UUID'
+          description: List of media IDs to attach
+
+    WSMessageEditPayload:
+      type: object
+      required: [type, message_id, content]
+      properties:
+        type:
+          type: string
+          enum: [message_edit]
+        message_id:
+          $ref: '#/components/schemas/UUID'
+        content:
+          type: string
+          minLength: 1
+
+    WSMessageDeletePayload:
+      type: object
+      required: [type, message_id]
+      properties:
+        type:
+          type: string
+          enum: [message_delete]
+        message_id:
+          $ref: '#/components/schemas/UUID'
+
+    WSMessageForwardPayload:
+      type: object
+      required: [type, message_id, conversation_id]
+      properties:
+        type:
+          type: string
+          enum: [message_forward]
+        message_id:
+          $ref: '#/components/schemas/UUID'
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+
+    WSTypingStartPayload:
+      type: object
+      required: [type, conversation_id]
+      properties:
+        type:
+          type: string
+          enum: [typing_start]
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+
+    WSTypingStopPayload:
+      type: object
+      required: [type, conversation_id]
+      properties:
+        type:
+          type: string
+          enum: [typing_stop]
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+
+    WSPingPayload:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [ping]
+
+    # Outgoing message payloads
+    WSMessageReceivedPayload:
+      type: object
+      required: [type, id, content, sender_id, conversation_id, sender_name, created_at, updated_at, is_edited, is_deleted]
+      properties:
+        type:
+          type: string
+          enum: [message]
+        id:
+          $ref: '#/components/schemas/UUID'
+        content:
+          type: string
+        sender_id:
+          $ref: '#/components/schemas/UUID'
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+        forwarded_from_id:
+          $ref: '#/components/schemas/UUID'
+        sender_name:
+          type: string
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaItem'
+        created_at:
+          $ref: '#/components/schemas/DateTime'
+        updated_at:
+          $ref: '#/components/schemas/DateTime'
+        is_edited:
+          type: boolean
+        is_deleted:
+          type: boolean
+
+    WSMessageEditedPayload:
+      type: object
+      required: [type, message_id, content, updated_at]
+      properties:
+        type:
+          type: string
+          enum: [message_edit]
+        message_id:
+          $ref: '#/components/schemas/UUID'
+        content:
+          type: string
+        updated_at:
+          $ref: '#/components/schemas/DateTime'
+
+    WSMessageDeletedPayload:
+      type: object
+      required: [type, message_id, conversation_id, deleted_at]
+      properties:
+        type:
+          type: string
+          enum: [message_delete]
+        message_id:
+          $ref: '#/components/schemas/UUID'
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+        deleted_at:
+          $ref: '#/components/schemas/DateTime'
+
+    WSMessageForwardedPayload:
+      type: object
+      required: [type, original_message_id, new_message_id, conversation_id, forwarded_from_id, content, created_at]
+      properties:
+        type:
+          type: string
+          enum: [message_forward]
+        original_message_id:
+          $ref: '#/components/schemas/UUID'
+        new_message_id:
+          $ref: '#/components/schemas/UUID'
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+        forwarded_from_id:
+          $ref: '#/components/schemas/UUID'
+        content:
+          type: string
+        created_at:
+          $ref: '#/components/schemas/DateTime'
+
+    WSTypingIndicatorPayload:
+      type: object
+      required: [type, user_id, user_name, conversation_id]
+      properties:
+        type:
+          type: string
+          enum: [typing_start, typing_stop]
+        user_id:
+          $ref: '#/components/schemas/UUID'
+        user_name:
+          type: string
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+
+    WSUserOnlinePayload:
+      type: object
+      required: [type, user_id, user_name]
+      properties:
+        type:
+          type: string
+          enum: [user_online]
+        user_id:
+          $ref: '#/components/schemas/UUID'
+        user_name:
+          type: string
+        last_seen:
+          $ref: '#/components/schemas/DateTime'
+
+    WSUserOfflinePayload:
+      type: object
+      required: [type, user_id, user_name, last_seen]
+      properties:
+        type:
+          type: string
+          enum: [user_offline]
+        user_id:
+          $ref: '#/components/schemas/UUID'
+        user_name:
+          type: string
+        last_seen:
+          $ref: '#/components/schemas/DateTime'
+
+    WSPongPayload:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [pong]
+
+    WSAuthSuccessPayload:
+      type: object
+      required: [type, user_id, user_name]
+      properties:
+        type:
+          type: string
+          enum: [auth_success]
+        user_id:
+          $ref: '#/components/schemas/UUID'
+        user_name:
+          type: string
+
+    WSErrorPayload:
+      type: object
+      required: [type, code, message]
+      properties:
+        type:
+          type: string
+          enum: [error]
+        code:
+          type: string
+          enum: [
+            AUTH_REQUIRED,
+            AUTH_FAILED,
+            INVALID_MESSAGE,
+            PERMISSION_DENIED,
+            CONVERSATION_NOT_FOUND,
+            MESSAGE_NOT_FOUND,
+            USER_NOT_FOUND,
+            INVALID_CONTENT,
+            RATE_LIMIT_EXCEEDED,
+            INTERNAL_ERROR
+          ]
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+
+  messages:
+    WSAuthMessage:
+      name: auth
+      title: Authentication Message
+      summary: Authenticate user via JWT token
+      description: First message from client to authenticate. Can be sent if token was not provided in query parameter.
+      payload:
+        $ref: '#/components/schemas/WSAuthMessagePayload'
+      examples:
+        - payload:
+            type: "auth"
+            token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    WSMessageCreate:
+      name: message
+      title: Create Message
+      summary: Create a new message in a conversation
+      description: Send a new message to a conversation. Can include forwarded message ID and media IDs.
+      payload:
+        $ref: '#/components/schemas/WSMessageCreatePayload'
+      examples:
+        - payload:
+            type: "message"
+            conversation_id: "123e4567-e89b-12d3-a456-426614174000"
+            content: "Hello, world!"
+        - payload:
+            type: "message"
+            conversation_id: "123e4567-e89b-12d3-a456-426614174000"
+            content: "Check this out"
+            forwarded_from_id: "223e4567-e89b-12d3-a456-426614174001"
+            media_ids: ["323e4567-e89b-12d3-a456-426614174002"]
+
+    WSMessageEdit:
+      name: message_edit
+      title: Edit Message
+      summary: Edit an existing message
+      description: Update the content of a message. Only the sender can edit their message.
+      payload:
+        $ref: '#/components/schemas/WSMessageEditPayload'
+      examples:
+        - payload:
+            type: "message_edit"
+            message_id: "123e4567-e89b-12d3-a456-426614174000"
+            content: "Updated message content"
+
+    WSMessageDelete:
+      name: message_delete
+      title: Delete Message
+      summary: Delete a message
+      description: Soft delete a message. Only the sender can delete their message.
+      payload:
+        $ref: '#/components/schemas/WSMessageDeletePayload'
+      examples:
+        - payload:
+            type: "message_delete"
+            message_id: "123e4567-e89b-12d3-a456-426614174000"
+
+    WSMessageForward:
+      name: message_forward
+      title: Forward Message
+      summary: Forward a message to another conversation
+      description: Forward an existing message to a different conversation.
+      payload:
+        $ref: '#/components/schemas/WSMessageForwardPayload'
+      examples:
+        - payload:
+            type: "message_forward"
+            message_id: "123e4567-e89b-12d3-a456-426614174000"
+            conversation_id: "223e4567-e89b-12d3-a456-426614174001"
+
+    WSTypingStart:
+      name: typing_start
+      title: Typing Start
+      summary: Indicate user started typing
+      description: Notify other participants that user started typing. Auto-stops after timeout.
+      payload:
+        $ref: '#/components/schemas/WSTypingStartPayload'
+      examples:
+        - payload:
+            type: "typing_start"
+            conversation_id: "123e4567-e89b-12d3-a456-426614174000"
+
+    WSTypingStop:
+      name: typing_stop
+      title: Typing Stop
+      summary: Indicate user stopped typing
+      description: Notify other participants that user stopped typing.
+      payload:
+        $ref: '#/components/schemas/WSTypingStopPayload'
+      examples:
+        - payload:
+            type: "typing_stop"
+            conversation_id: "123e4567-e89b-12d3-a456-426614174000"
+
+    WSPing:
+      name: ping
+      title: Heartbeat Ping
+      summary: Heartbeat ping message
+      description: Send ping to keep connection alive. Server responds with pong.
+      payload:
+        $ref: '#/components/schemas/WSPingPayload'
+      examples:
+        - payload:
+            type: "ping"
+
+    # ==================== Outgoing Messages (Server -> Client) ====================
+
+    WSMessageReceived:
+      name: message
+      title: Message Received
+      summary: New message received
+      description: Broadcast to all participants when a new message is created.
+      payload:
+        $ref: '#/components/schemas/WSMessageReceivedPayload'
+      examples:
+        - payload:
+            type: "message"
+            id: "123e4567-e89b-12d3-a456-426614174000"
+            content: "Hello, world!"
+            sender_id: "223e4567-e89b-12d3-a456-426614174001"
+            conversation_id: "323e4567-e89b-12d3-a456-426614174002"
+            sender_name: "John Doe"
+            media: []
+            created_at: "2024-01-15T10:30:00Z"
+            updated_at: "2024-01-15T10:30:00Z"
+            is_edited: false
+            is_deleted: false
+
+    WSMessageEdited:
+      name: message_edit
+      title: Message Edited
+      summary: Message was edited
+      description: Broadcast to all participants when a message is edited.
+      payload:
+        $ref: '#/components/schemas/WSMessageEditedPayload'
+      examples:
+        - payload:
+            type: "message_edit"
+            message_id: "123e4567-e89b-12d3-a456-426614174000"
+            content: "Updated message content"
+            updated_at: "2024-01-15T10:35:00Z"
+
+    WSMessageDeleted:
+      name: message_delete
+      title: Message Deleted
+      summary: Message was deleted
+      description: Broadcast to all participants when a message is deleted.
+      payload:
+        $ref: '#/components/schemas/WSMessageDeletedPayload'
+      examples:
+        - payload:
+            type: "message_delete"
+            message_id: "123e4567-e89b-12d3-a456-426614174000"
+            conversation_id: "223e4567-e89b-12d3-a456-426614174001"
+            deleted_at: "2024-01-15T10:40:00Z"
+
+    WSMessageForwarded:
+      name: message_forward
+      title: Message Forwarded
+      summary: Message was forwarded
+      description: Broadcast to participants of target conversation when a message is forwarded.
+      payload:
+        $ref: '#/components/schemas/WSMessageForwardedPayload'
+      examples:
+        - payload:
+            type: "message_forward"
+            original_message_id: "123e4567-e89b-12d3-a456-426614174000"
+            new_message_id: "223e4567-e89b-12d3-a456-426614174001"
+            conversation_id: "323e4567-e89b-12d3-a456-426614174002"
+            forwarded_from_id: "423e4567-e89b-12d3-a456-426614174003"
+            content: "Original message content"
+            created_at: "2024-01-15T10:30:00Z"
+
+    WSTypingIndicator:
+      name: typing_indicator
+      title: Typing Indicator
+      summary: User typing indicator
+      description: Broadcast to other participants when user starts or stops typing.
+      payload:
+        $ref: '#/components/schemas/WSTypingIndicatorPayload'
+      examples:
+        - payload:
+            type: "typing_start"
+            user_id: "123e4567-e89b-12d3-a456-426614174000"
+            user_name: "John Doe"
+            conversation_id: "223e4567-e89b-12d3-a456-426614174001"
+        - payload:
+            type: "typing_stop"
+            user_id: "123e4567-e89b-12d3-a456-426614174000"
+            user_name: "John Doe"
+            conversation_id: "223e4567-e89b-12d3-a456-426614174001"
+
+    WSUserOnline:
+      name: user_online
+      title: User Online
+      summary: User came online
+      description: Notify when a user comes online (future feature).
+      payload:
+        $ref: '#/components/schemas/WSUserOnlinePayload'
+
+    WSUserOffline:
+      name: user_offline
+      title: User Offline
+      summary: User went offline
+      description: Notify when a user goes offline (future feature).
+      payload:
+        $ref: '#/components/schemas/WSUserOfflinePayload'
+
+    WSPong:
+      name: pong
+      title: Heartbeat Pong
+      summary: Heartbeat pong response
+      description: Server response to ping message.
+      payload:
+        $ref: '#/components/schemas/WSPongPayload'
+      examples:
+        - payload:
+            type: "pong"
+
+    WSAuthSuccess:
+      name: auth_success
+      title: Authentication Success
+      summary: Authentication successful
+      description: Sent after successful authentication.
+      payload:
+        $ref: '#/components/schemas/WSAuthSuccessPayload'
+      examples:
+        - payload:
+            type: "auth_success"
+            user_id: "123e4567-e89b-12d3-a456-426614174000"
+            user_name: "John Doe"
+
+    WSError:
+      name: error
+      title: Error Message
+      summary: Error occurred
+      description: Sent when an error occurs processing a message.
+      payload:
+        $ref: '#/components/schemas/WSErrorPayload'
+      examples:
+        - payload:
+            type: "error"
+            code: "AUTH_REQUIRED"
+            message: "Authentication required"
+        - payload:
+            type: "error"
+            code: "INVALID_MESSAGE"
+            message: "Invalid message format"
+            details:
+              field: "content"
+              reason: "Content cannot be empty"

@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta, timezone
-from typing import Any
+from datetime import datetime, timedelta, UTC
+from typing import Any, Literal
 from jose import jwt
 from uuid import UUID
 
@@ -10,7 +10,9 @@ class JWTHandler:
     """Handler for JWT tokens"""
 
     @staticmethod
-    def create_jwt_token(user_id: UUID, token_type: str) -> tuple[str, datetime]:
+    def create_jwt_token(
+        user_id: UUID, token_type: Literal["access", "refresh"]
+    ) -> tuple[str, datetime]:
         """Create jwt token"""
         current_date = datetime.now()
         current_date: datetime = current_date.replace(tzinfo=None)
@@ -24,7 +26,7 @@ class JWTHandler:
         jwt_data = {
             "sub": str(user_id),
             "type": token_type,
-            "exp": int(expires_at.timestamp()),  # Конвертируем в timestamp
+            "exp": int(expires_at.timestamp()),
         }
 
         token = jwt.encode(
@@ -40,19 +42,15 @@ class JWTHandler:
         )
 
     @staticmethod
-    def is_token_expired(token: str | dict) -> bool:
+    def is_token_expired(token: str | dict[str, Any]) -> bool:
         """Check if token is expired"""
         try:
-            if isinstance(token, str):
-                payload = JWTHandler.decode_token(token)
-            else:
-                payload = token
+            payload = JWTHandler.decode_token(token) if isinstance(token, str) else token
             exp = payload.get("exp")
             if not exp:
                 return True
 
-            # Сравниваем timestamp напрямую
-            return exp < int(datetime.now(timezone.utc).timestamp())
+            return exp < int(datetime.now(UTC).timestamp())
 
         except Exception:
             return True
@@ -65,5 +63,4 @@ class JWTHandler:
         if not exp:
             raise ValueError("Token has no expiration time")
 
-        # Конвертируем timestamp в datetime с UTC
-        return datetime.fromtimestamp(exp, tz=timezone.utc)
+        return datetime.fromtimestamp(exp, tz=UTC)

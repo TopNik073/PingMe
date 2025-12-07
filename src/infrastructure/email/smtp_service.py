@@ -1,4 +1,3 @@
-from typing import List
 import aiosmtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -9,16 +8,19 @@ from src.application.interfaces.email import AbstractEmailService
 from src.core.config import settings
 from src.infrastructure.database.models.users import Users
 
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 class SMTPService(AbstractEmailService):
     """SMTP email service implementation"""
 
-    async def _create_connection(self) -> aiosmtplib.SMTP:
+    @staticmethod
+    async def _create_connection() -> aiosmtplib.SMTP:
         """Create SMTP connection"""
-        # Создаем SSL контекст
         ssl_context = ssl.create_default_context()
 
-        # Создаем SMTP клиент
         smtp = aiosmtplib.SMTP(
             hostname=settings.SMTP_HOST,
             port=settings.SMTP_PORT,
@@ -26,15 +28,18 @@ class SMTPService(AbstractEmailService):
             tls_context=ssl_context,
         )
 
-        # Подключаемся и логинимся
-        await smtp.connect()
-        await smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD.get_secret_value())
+        try:
+            logger.debug("Connecting with SMTP...")
+            await smtp.connect()
+            await smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD.get_secret_value())
+        except Exception as e:
+            logger.exception("Failed to connect with smtp: %s", e)
 
         return smtp
 
+    @staticmethod
     def _create_message(
-        self,
-        to_email: str | List[str],
+        to_email: str | list[str],
         subject: str,
         body: str,
     ) -> MIMEMultipart:
@@ -49,15 +54,18 @@ class SMTPService(AbstractEmailService):
         return message
 
     async def send_email(
-        self, to_email: str | List[str], subject: str, body: str, html: bool = False
+        self, to_email: str | list[str], subject: str, body: str
     ) -> None:
         """Send email via SMTP"""
         message = self._create_message(to_email, subject, body)
 
         smtp = await self._create_connection()
         try:
+            logger.debug("Trying to send email")
             await smtp.send_message(message)
-            print("email sent")
+            logger.debug("Email was sent")
+        except Exception as e:
+            logger.exception("Fail to send email via SMTP to %s: %s", to_email, e)
         finally:
             await smtp.quit()
 
