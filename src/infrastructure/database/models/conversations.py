@@ -1,4 +1,3 @@
-
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import Enum
@@ -10,7 +9,7 @@ from src.infrastructure.database.enums.ConversationType import ConversationType
 
 
 class Conversations(BaseModel):
-    __tablename__ = "conversations"
+    __tablename__ = 'conversations'
 
     id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False
@@ -18,24 +17,22 @@ class Conversations(BaseModel):
 
     name: Mapped[str] = mapped_column(nullable=True)
 
-    users: Mapped[list["UserConversation"]] = relationship(back_populates="conversation")
-    messages: Mapped[list["Messages"]] = relationship(back_populates="conversation")
-    avatar: Mapped["Media"] = relationship(
-        back_populates="conversation", foreign_keys="Media.conversation_id", uselist=False
+    users: Mapped[list['UserConversation']] = relationship(back_populates='conversation')
+    messages: Mapped[list['Messages']] = relationship(back_populates='conversation')
+    avatar: Mapped['Media'] = relationship(
+        back_populates='conversation', foreign_keys='Media.conversation_id', uselist=False
     )
 
     conversation_type: Mapped[ConversationType] = mapped_column(
-        Enum(ConversationType, name="conversation_type", create_constraint=True),
-        nullable=False
+        Enum(ConversationType, name='conversation_type', create_constraint=True), nullable=False
     )
 
     created_at: Mapped[datetime] = mapped_column(default=get_datetime_UTC)
-    updated_at: Mapped[datetime] = mapped_column(
-        default=get_datetime_UTC, onupdate=get_datetime_UTC
-    )
+    updated_at: Mapped[datetime] = mapped_column(default=get_datetime_UTC, onupdate=get_datetime_UTC)
 
     is_deleted: Mapped[bool] = mapped_column(nullable=False, default=False)
     deleted_at: Mapped[datetime] = mapped_column(nullable=True)
+
 
 from src.infrastructure.database.models.user_conversation import UserConversation
 from src.infrastructure.database.models.messages import Messages

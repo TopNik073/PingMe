@@ -1,2 +1,1 @@
 """Messages API module"""
-

@@ -13,16 +13,16 @@ jwt_handler = JWTHandler()
 
 
 def verify_token(payload: dict) -> bool:
-    if (token_type := payload.get("type")) is None:
+    if (token_type := payload.get('type')) is None:
         return False
 
-    if token_type != "access":
+    if token_type != 'access':
         return False
 
     if jwt_handler.is_token_expired(payload):
         return False
 
-    return payload.get("sub") is not None
+    return payload.get('sub') is not None
 
 
 async def get_current_user(
@@ -38,7 +38,7 @@ async def get_current_user(
         if not verify_token(payload):
             return raise_unauthorized_error()
 
-        user_id = payload.get("sub")
+        user_id = payload.get('sub')
         if user_id is None:
             return raise_unauthorized_error()
 

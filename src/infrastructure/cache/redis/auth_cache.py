@@ -8,11 +8,11 @@ class AuthCache:
 
     def __init__(self, redis_client: Redis):
         self._cache = RedisCache(redis_client)
-        self._prefix = "auth:"
+        self._prefix = 'auth:'
 
     def _get_key(self, email: str) -> str:
         """Get cache key for email"""
-        return f"{self._prefix}{email}"
+        return f'{self._prefix}{email}'
 
     async def save_auth(self, email: str, data: dict[str, Any], expire: int = 600) -> None:
         """Save authentication data to cache"""

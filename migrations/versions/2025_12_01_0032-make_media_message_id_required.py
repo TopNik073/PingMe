@@ -13,8 +13,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "b2c3d4e5f6a7"
-down_revision: Union[str, None] = "a1b2c3d4e5f6"
+revision: str = 'b2c3d4e5f6a7'
+down_revision: Union[str, None] = 'a1b2c3d4e5f6'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -25,7 +25,7 @@ def upgrade() -> None:
         DELETE FROM media 
         WHERE message_id IS NULL AND story_id IS NULL
     """)
-    
+
     # Add check constraint: either message_id or story_id must be set
     op.execute("""
         ALTER TABLE media 
@@ -36,5 +36,4 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Remove check constraint
-    op.execute("ALTER TABLE media DROP CONSTRAINT IF EXISTS check_media_reference")
-
+    op.execute('ALTER TABLE media DROP CONSTRAINT IF EXISTS check_media_reference')

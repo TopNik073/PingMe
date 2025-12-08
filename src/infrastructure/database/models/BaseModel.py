@@ -21,16 +21,16 @@ class BaseModel(AsyncAttrs, DeclarativeBase):
         cols = []
         for idx, col in enumerate(self.__table__.columns.keys()):
             if col in self.repr_cols or idx < self.repr_cols_num:
-                cols.append(f"{col}={getattr(self, col)}")
+                cols.append(f'{col}={getattr(self, col)}')
 
-        return f"<{self.__class__.__name__} {', '.join(cols)}>"
-    
+        return f'<{self.__class__.__name__} {", ".join(cols)}>'
+
     def to_dict(self) -> dict:
         """Convert model to dictionary"""
         result = {}
         for column in self.__table__.columns:
             value = getattr(self, column.name)
-            
+
             # Handle special types
             if isinstance(value, datetime):
                 value = value.isoformat()
@@ -38,7 +38,7 @@ class BaseModel(AsyncAttrs, DeclarativeBase):
                 value = str(value)
             elif hasattr(value, 'value'):  # For Enum types
                 value = value.value
-                
+
             result[column.name] = value
-            
+
         return result

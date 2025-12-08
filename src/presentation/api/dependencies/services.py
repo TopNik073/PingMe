@@ -37,13 +37,11 @@ def get_s3_manager() -> S3Manager:
     return S3Manager()
 
 
-async def get_user_service(
-    session: DB_DEP, s3_manager: S3Manager = Depends(get_s3_manager)
-) -> UserService:
+async def get_user_service(session: DB_DEP, s3_manager: S3Manager = Depends(get_s3_manager)) -> UserService:
     """Get UserService instance with all dependencies"""
     user_repository = UserRepository(session)
     media_repository = MediaRepository(session)
-    
+
     return UserService(
         user_repository=user_repository,
         media_repository=media_repository,
@@ -59,7 +57,7 @@ async def get_conversation_service(
     user_repository = UserRepository(session)
     message_repository = MessageRepository(session)
     media_repository = MediaRepository(session)
-    
+
     return ConversationService(
         conversation_repository=conversation_repository,
         user_repository=user_repository,
@@ -69,13 +67,11 @@ async def get_conversation_service(
     )
 
 
-async def get_media_service(
-    session: DB_DEP, s3_manager: S3Manager = Depends(get_s3_manager)
-) -> MediaService:
+async def get_media_service(session: DB_DEP, s3_manager: S3Manager = Depends(get_s3_manager)) -> MediaService:
     """Get MediaService instance with all dependencies"""
     media_repository = MediaRepository(session)
     conversation_repository = ConversationRepository(session)
-    
+
     return MediaService(
         media_repository=media_repository,
         conversation_repository=conversation_repository,
@@ -104,7 +100,7 @@ async def get_message_service(
         message_repository=message_repository,
     )
 
-    from src.presentation.api.v1.websocket.router import connection_manager # noqa: PLC0415
+    from src.presentation.api.v1.websocket.router import connection_manager  # noqa: PLC0415
 
     return MessageService(
         message_repository=message_repository,

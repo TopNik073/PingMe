@@ -1,7 +1,7 @@
 from typing import TypeVar
 from pydantic import BaseModel
 
-DataT = TypeVar("DataT")
+DataT = TypeVar('DataT')
 
 
 class ResponseModel[DataT](BaseModel):

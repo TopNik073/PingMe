@@ -6,7 +6,7 @@ from src.presentation.api.v1.media.router import router as media_router
 from src.presentation.api.v1.messages.router import router as messages_router
 from src.presentation.api.v1.websocket.router import router as websocket_router
 
-V1_ROUTER = APIRouter(prefix="/api/v1")
+V1_ROUTER = APIRouter(prefix='/api/v1')
 
 V1_ROUTER.include_router(auth_router)
 V1_ROUTER.include_router(user_router)
