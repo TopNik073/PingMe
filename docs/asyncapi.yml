@@ -11,8 +11,11 @@ info:
     - Client connects to WebSocket endpoint
     - Authenticates via token (auth message)
     - Receives auth_success message on successful authentication
-    - Can send/receive messages, typing indicators, etc.
+    - Can send/receive messages, typing indicators, mark messages as read, etc.
     - Server sends pong in response to ping (heartbeat)
+    - Messages include optional sequence numbers for ordering (except ping/pong)
+    - Server broadcasts messages to all conversation participants
+    - Rate limiting is applied to prevent abuse
 
 servers:
   development:
@@ -39,6 +42,10 @@ operations:
       - $ref: '#/channels/ws/messages/typing_start'
       - $ref: '#/channels/ws/messages/typing_stop'
       - $ref: '#/channels/ws/messages/ping'
+      - $ref: '#/channels/ws/messages/mark_read'
+      - $ref: '#/channels/ws/messages/ack'
+      - $ref: '#/channels/ws/messages/subscribe'
+      - $ref: '#/channels/ws/messages/unsubscribe'
 
   sendMessage:
     action: send
@@ -56,6 +63,9 @@ operations:
       - $ref: '#/channels/ws/messages/user_offline'
       - $ref: '#/channels/ws/messages/pong'
       - $ref: '#/channels/ws/messages/auth_success'
+      - $ref: '#/channels/ws/messages/mark_read_success'
+      - $ref: '#/channels/ws/messages/message_read'
+      - $ref: '#/channels/ws/messages/message_ack'
       - $ref: '#/channels/ws/messages/error'
 
 channels:
@@ -81,6 +91,14 @@ channels:
         $ref: '#/components/messages/WSTypingStop'
       ping:
         $ref: '#/components/messages/WSPing'
+      mark_read:
+        $ref: '#/components/messages/WSMarkRead'
+      ack:
+        $ref: '#/components/messages/WSAck'
+      subscribe:
+        $ref: '#/components/messages/WSSubscribe'
+      unsubscribe:
+        $ref: '#/components/messages/WSUnsubscribe'
 
       # Outgoing messages (Server -> Client)
       message_received:
@@ -101,6 +119,12 @@ channels:
         $ref: '#/components/messages/WSPong'
       auth_success:
         $ref: '#/components/messages/WSAuthSuccess'
+      mark_read_success:
+        $ref: '#/components/messages/WSMarkReadSuccess'
+      message_read:
+        $ref: '#/components/messages/WSMessageRead'
+      message_ack:
+        $ref: '#/components/messages/WSMessageAck'
       error:
         $ref: '#/components/messages/WSError'
 
@@ -152,6 +176,10 @@ components:
           type: string
           description: JWT access token
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        sequence:
+          type: integer
+          description: Optional sequence number for message ordering
+          example: 1
 
     WSMessageCreatePayload:
       type: object
@@ -165,7 +193,8 @@ components:
         content:
           type: string
           minLength: 1
-          description: Message content
+          maxLength: 1000
+          description: Message content (max 1000 characters)
         forwarded_from_id:
           $ref: '#/components/schemas/UUID'
           description: Original message ID if forwarding
@@ -174,6 +203,10 @@ components:
           items:
             $ref: '#/components/schemas/UUID'
           description: List of media IDs to attach
+        sequence:
+          type: integer
+          description: Optional sequence number for message ordering
+          example: 1
 
     WSMessageEditPayload:
       type: object
@@ -187,6 +220,12 @@ components:
         content:
           type: string
           minLength: 1
+          maxLength: 1000
+          description: New message content (max 1000 characters)
+        sequence:
+          type: integer
+          description: Optional sequence number for message ordering
+          example: 1
 
     WSMessageDeletePayload:
       type: object
@@ -197,6 +236,10 @@ components:
           enum: [message_delete]
         message_id:
           $ref: '#/components/schemas/UUID'
+        sequence:
+          type: integer
+          description: Optional sequence number for message ordering
+          example: 1
 
     WSMessageForwardPayload:
       type: object
@@ -209,6 +252,10 @@ components:
           $ref: '#/components/schemas/UUID'
         conversation_id:
           $ref: '#/components/schemas/UUID'
+        sequence:
+          type: integer
+          description: Optional sequence number for message ordering
+          example: 1
 
     WSTypingStartPayload:
       type: object
@@ -219,6 +266,10 @@ components:
           enum: [typing_start]
         conversation_id:
           $ref: '#/components/schemas/UUID'
+        sequence:
+          type: integer
+          description: Optional sequence number for message ordering
+          example: 1
 
     WSTypingStopPayload:
       type: object
@@ -229,6 +280,10 @@ components:
           enum: [typing_stop]
         conversation_id:
           $ref: '#/components/schemas/UUID'
+        sequence:
+          type: integer
+          description: Optional sequence number for message ordering
+          example: 1
 
     WSPingPayload:
       type: object
@@ -237,6 +292,68 @@ components:
         type:
           type: string
           enum: [ping]
+        sequence:
+          type: integer
+          description: Optional sequence number for message ordering
+          example: 1
+
+    WSMarkReadPayload:
+      type: object
+      required: [type, message_id, conversation_id]
+      properties:
+        type:
+          type: string
+          enum: [mark_read]
+        message_id:
+          $ref: '#/components/schemas/UUID'
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+        sequence:
+          type: integer
+          description: Optional sequence number for message ordering
+          example: 1
+
+    WSAckPayload:
+      type: object
+      required: [type, message_id]
+      properties:
+        type:
+          type: string
+          enum: [ack]
+        message_id:
+          $ref: '#/components/schemas/UUID'
+        sequence:
+          type: integer
+          description: Optional sequence number of the acknowledged message
+          example: 1
+
+    WSSubscribePayload:
+      type: object
+      required: [type, conversation_id]
+      properties:
+        type:
+          type: string
+          enum: [subscribe]
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+        sequence:
+          type: integer
+          description: Optional sequence number for message ordering
+          example: 1
+
+    WSUnsubscribePayload:
+      type: object
+      required: [type, conversation_id]
+      properties:
+        type:
+          type: string
+          enum: [unsubscribe]
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+        sequence:
+          type: integer
+          description: Optional sequence number for message ordering
+          example: 1
 
     # Outgoing message payloads
     WSMessageReceivedPayload:
@@ -270,6 +387,10 @@ components:
           type: boolean
         is_deleted:
           type: boolean
+        sequence:
+          type: integer
+          description: Sequence number for message ordering
+          example: 1
 
     WSMessageEditedPayload:
       type: object
@@ -284,6 +405,10 @@ components:
           type: string
         updated_at:
           $ref: '#/components/schemas/DateTime'
+        sequence:
+          type: integer
+          description: Sequence number for message ordering
+          example: 1
 
     WSMessageDeletedPayload:
       type: object
@@ -298,6 +423,10 @@ components:
           $ref: '#/components/schemas/UUID'
         deleted_at:
           $ref: '#/components/schemas/DateTime'
+        sequence:
+          type: integer
+          description: Sequence number for message ordering
+          example: 1
 
     WSMessageForwardedPayload:
       type: object
@@ -318,6 +447,10 @@ components:
           type: string
         created_at:
           $ref: '#/components/schemas/DateTime'
+        sequence:
+          type: integer
+          description: Sequence number for message ordering
+          example: 1
 
     WSTypingIndicatorPayload:
       type: object
@@ -332,6 +465,10 @@ components:
           type: string
         conversation_id:
           $ref: '#/components/schemas/UUID'
+        sequence:
+          type: integer
+          description: Sequence number for message ordering
+          example: 1
 
     WSUserOnlinePayload:
       type: object
@@ -346,6 +483,10 @@ components:
           type: string
         last_seen:
           $ref: '#/components/schemas/DateTime'
+        sequence:
+          type: integer
+          description: Sequence number for message ordering
+          example: 1
 
     WSUserOfflinePayload:
       type: object
@@ -360,6 +501,10 @@ components:
           type: string
         last_seen:
           $ref: '#/components/schemas/DateTime'
+        sequence:
+          type: integer
+          description: Sequence number for message ordering
+          example: 1
 
     WSPongPayload:
       type: object
@@ -368,6 +513,10 @@ components:
         type:
           type: string
           enum: [pong]
+        sequence:
+          type: integer
+          description: Optional sequence number (ping/pong messages typically don't use sequence)
+          example: null
 
     WSAuthSuccessPayload:
       type: object
@@ -380,6 +529,65 @@ components:
           $ref: '#/components/schemas/UUID'
         user_name:
           type: string
+        sequence:
+          type: integer
+          description: Sequence number for message ordering
+          example: 1
+
+    WSMarkReadSuccessPayload:
+      type: object
+      required: [type, message_id, conversation_id]
+      properties:
+        type:
+          type: string
+          enum: [mark_read_success]
+        message_id:
+          $ref: '#/components/schemas/UUID'
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+        sequence:
+          type: integer
+          description: Sequence number for message ordering
+          example: 1
+
+    WSMessageReadPayload:
+      type: object
+      required: [type, message_id, conversation_id, reader_id, reader_name]
+      properties:
+        type:
+          type: string
+          enum: [message_read]
+        message_id:
+          $ref: '#/components/schemas/UUID'
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+        reader_id:
+          $ref: '#/components/schemas/UUID'
+        reader_name:
+          type: string
+        sequence:
+          type: integer
+          description: Sequence number for message ordering
+          example: 1
+
+    WSMessageAckPayload:
+      type: object
+      required: [type, message_id, status]
+      properties:
+        type:
+          type: string
+          enum: [message_ack]
+        message_id:
+          $ref: '#/components/schemas/UUID'
+        status:
+          type: string
+          enum: [delivered, read]
+          description: Acknowledgment status
+          default: delivered
+        sequence:
+          type: integer
+          description: Sequence number for message ordering
+          example: 1
 
     WSErrorPayload:
       type: object
@@ -410,6 +618,10 @@ components:
           type: object
           description: Additional error details
           additionalProperties: true
+        sequence:
+          type: integer
+          description: Sequence number for message ordering
+          example: 1
 
   messages:
     WSAuthMessage:
@@ -515,6 +727,56 @@ components:
       examples:
         - payload:
             type: "ping"
+
+    WSMarkRead:
+      name: mark_read
+      title: Mark Message as Read
+      summary: Mark a message as read
+      description: Mark a specific message in a conversation as read. Server responds with mark_read_success and broadcasts message_read to other participants.
+      payload:
+        $ref: '#/components/schemas/WSMarkReadPayload'
+      examples:
+        - payload:
+            type: "mark_read"
+            message_id: "123e4567-e89b-12d3-a456-426614174000"
+            conversation_id: "223e4567-e89b-12d3-a456-426614174001"
+
+    WSAck:
+      name: ack
+      title: Acknowledge Message
+      summary: Acknowledge message delivery
+      description: Acknowledge that a message was received. Server responds with message_ack.
+      payload:
+        $ref: '#/components/schemas/WSAckPayload'
+      examples:
+        - payload:
+            type: "ack"
+            message_id: "123e4567-e89b-12d3-a456-426614174000"
+            sequence: 1
+
+    WSSubscribe:
+      name: subscribe
+      title: Subscribe to Conversation
+      summary: Subscribe to receive messages from a conversation
+      description: Subscribe to a conversation to receive real-time updates. User must be a participant of the conversation.
+      payload:
+        $ref: '#/components/schemas/WSSubscribePayload'
+      examples:
+        - payload:
+            type: "subscribe"
+            conversation_id: "123e4567-e89b-12d3-a456-426614174000"
+
+    WSUnsubscribe:
+      name: unsubscribe
+      title: Unsubscribe from Conversation
+      summary: Unsubscribe from a conversation
+      description: Unsubscribe from a conversation to stop receiving real-time updates.
+      payload:
+        $ref: '#/components/schemas/WSUnsubscribePayload'
+      examples:
+        - payload:
+            type: "unsubscribe"
+            conversation_id: "123e4567-e89b-12d3-a456-426614174000"
 
     # ==================== Outgoing Messages (Server -> Client) ====================
 
@@ -642,6 +904,51 @@ components:
             type: "auth_success"
             user_id: "123e4567-e89b-12d3-a456-426614174000"
             user_name: "John Doe"
+            sequence: 1
+
+    WSMarkReadSuccess:
+      name: mark_read_success
+      title: Mark Read Success
+      summary: Message marked as read successfully
+      description: Sent to the user who marked a message as read, confirming the operation.
+      payload:
+        $ref: '#/components/schemas/WSMarkReadSuccessPayload'
+      examples:
+        - payload:
+            type: "mark_read_success"
+            message_id: "123e4567-e89b-12d3-a456-426614174000"
+            conversation_id: "223e4567-e89b-12d3-a456-426614174001"
+            sequence: 1
+
+    WSMessageRead:
+      name: message_read
+      title: Message Read Notification
+      summary: Broadcast when a message is read
+      description: Broadcast to all participants (except the reader) when a message is marked as read.
+      payload:
+        $ref: '#/components/schemas/WSMessageReadPayload'
+      examples:
+        - payload:
+            type: "message_read"
+            message_id: "123e4567-e89b-12d3-a456-426614174000"
+            conversation_id: "223e4567-e89b-12d3-a456-426614174001"
+            reader_id: "323e4567-e89b-12d3-a456-426614174002"
+            reader_name: "John Doe"
+            sequence: 1
+
+    WSMessageAck:
+      name: message_ack
+      title: Message Acknowledgment
+      summary: Message acknowledgment response
+      description: Server response to ack message, confirming that the acknowledgment was received.
+      payload:
+        $ref: '#/components/schemas/WSMessageAckPayload'
+      examples:
+        - payload:
+            type: "message_ack"
+            message_id: "123e4567-e89b-12d3-a456-426614174000"
+            status: "delivered"
+            sequence: 1
 
     WSError:
       name: error
