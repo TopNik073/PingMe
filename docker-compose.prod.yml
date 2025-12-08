@@ -5,6 +5,8 @@ services:
     image: ghcr.io/topnik073/pingme:${IMAGE_TAG:-latest}
     container_name: pingme-app
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - POSTGRES_HOST=db
       - REDIS_HOST=redis
@@ -51,28 +53,9 @@ services:
     restart: unless-stopped
 
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: pingme-pgadmin
-    restart: unless-stopped
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=${SMTP_USER}
-      - PGADMIN_DEFAULT_PASSWORD=${POSTGRES_PASSWORD}
-      - PGADMIN_LISTEN_PORT=5050
-    ports:
-      - "5050:5050"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    depends_on:
-      - db
-    networks:
-      - app_network
-
-
 volumes:
   postgres_data:
   redis_data:
-  pgadmin_data:
   app_logs:
 
 networks:
