@@ -17,7 +17,7 @@ router = APIRouter()
 connection_manager = ConnectionManager()
 
 
-@router.websocket("/ws")
+@router.websocket('/ws')
 async def websocket_endpoint(
     websocket: WebSocket,
     session: DB_DEP,
@@ -43,4 +43,3 @@ async def websocket_endpoint(
     )
 
     await handler.handle_connection()
-

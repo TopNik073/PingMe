@@ -23,7 +23,7 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    logger.info("Initializing application dependencies")
+    logger.info('Initializing application dependencies')
 
     # Initialize connections to the database and Redis
     app.state.redis = await init_redis_pool()
@@ -32,18 +32,18 @@ async def lifespan(app: FastAPI):
     # Initialize FCM service
     await initialize_fcm_service(app)
 
-    docs_route = f"http://{settings.APP_HOST}:{settings.APP_PORT}/docs"
-    logger.info("Application started successfully. See docs here %s", docs_route)
+    docs_route = f'http://{settings.APP_HOST}:{settings.APP_PORT}/docs'
+    logger.info('Application started successfully. See docs here %s', docs_route)
     yield
 
     # Shutdown
-    logger.info("Shutting down application")
+    logger.info('Shutting down application')
 
     # Close connections
     await close_redis_pool(app.state.redis)
     await engine.dispose()
 
-    logger.info("Application shutdown complete")
+    logger.info('Application shutdown complete')
 
 
 app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG, lifespan=lifespan)
@@ -54,8 +54,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=['*'],
+    allow_headers=['*'],
 )
 # Setup service middlewares
 app.add_middleware(RequestLoggingMiddleware)
@@ -66,9 +66,7 @@ app.include_router(V1_ROUTER)
 app.include_router(system_router)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import uvicorn
 
-    uvicorn.run(
-        "main:app", host=settings.APP_HOST, port=settings.APP_PORT, reload=False, log_level=40
-    )
+    uvicorn.run('main:app', host=settings.APP_HOST, port=settings.APP_PORT, reload=False, log_level=40)

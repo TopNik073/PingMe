@@ -6,9 +6,9 @@ from uuid import UUID
 from src.infrastructure.database.models.BaseModel import BaseModel as DBModel
 from pydantic import BaseModel as PydanticBaseModel
 
-MODEL_TYPE = TypeVar("MODEL_TYPE", bound=DBModel)
-PYDANTIC_TYPE = TypeVar("PYDANTIC_TYPE", bound=PydanticBaseModel)
-SessionType = TypeVar("SessionType")
+MODEL_TYPE = TypeVar('MODEL_TYPE', bound=DBModel)
+PYDANTIC_TYPE = TypeVar('PYDANTIC_TYPE', bound=PydanticBaseModel)
+SessionType = TypeVar('SessionType')
 
 
 class AbstractRepository[MODEL_TYPE](ABC):
@@ -32,16 +32,12 @@ class AbstractRepository[MODEL_TYPE](ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_by_id(
-        self, id: UUID, include_relations: list[str] | None = None
-    ) -> MODEL_TYPE | None:
+    async def get_by_id(self, id: UUID, include_relations: list[str] | None = None) -> MODEL_TYPE | None:
         """Gets a record by id with optional related data"""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_by_filter(
-        self, include_relations: list[str] | None = None, **filters
-    ) -> list[MODEL_TYPE]:
+    async def get_by_filter(self, include_relations: list[str] | None = None, **filters) -> list[MODEL_TYPE]:
         """Gets a record by specified filters with optional related data"""
         raise NotImplementedError
 
@@ -58,9 +54,7 @@ class AbstractRepository[MODEL_TYPE](ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def update(
-        self, id: UUID | None = None, data: PYDANTIC_TYPE | MODEL_TYPE | None = None
-    ) -> MODEL_TYPE | None:
+    async def update(self, id: UUID | None = None, data: PYDANTIC_TYPE | MODEL_TYPE | None = None) -> MODEL_TYPE | None:
         """Updates a record"""
         raise NotImplementedError
 

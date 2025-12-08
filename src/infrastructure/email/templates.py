@@ -3,6 +3,7 @@ from typing import Protocol
 
 class EmailTemplate(Protocol):
     """Protocol for email templates"""
+
     subject: str
     body: str
     html: bool = False
@@ -14,10 +15,11 @@ class EmailTemplate(Protocol):
 
 class TwoFactorAuthTemplate:
     """Template for 2FA verification code"""
+
     def __init__(self, code: str, username: str):
-        self.subject = f"Your verification code: {code}"
+        self.subject = f'Your verification code: {code}'
         self.html = True
-        self.body = fr"""
+        self.body = rf"""
         <html>
             <head>
                 <meta charset="UTF-8">
@@ -159,4 +161,3 @@ class TwoFactorAuthTemplate:
     def render(self) -> str:
         """Render template to string"""
         return self.body
-        

@@ -29,9 +29,7 @@ class SQLAlchemyRepository(AbstractRepository[MODEL_TYPE]):
         await self._session.refresh(db_obj)
         return db_obj
 
-    async def get_by_id(
-        self, id: UUID, include_relations: list[str] | None = None
-    ) -> MODEL_TYPE | None:
+    async def get_by_id(self, id: UUID, include_relations: list[str] | None = None) -> MODEL_TYPE | None:
         """Get record by id"""
         query = select(self.model).where(self.model.id == id)
         if include_relations:
@@ -40,9 +38,7 @@ class SQLAlchemyRepository(AbstractRepository[MODEL_TYPE]):
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_by_filter(
-        self, include_relations: list[str] | None = None, **filters
-    ) -> list[MODEL_TYPE]:
+    async def get_by_filter(self, include_relations: list[str] | None = None, **filters) -> list[MODEL_TYPE]:
         """Get records by filters with optional related data loading"""
         query = select(self.model)
 
@@ -60,16 +56,14 @@ class SQLAlchemyRepository(AbstractRepository[MODEL_TYPE]):
 
         return list(records) if records else []
 
-    async def update(
-        self, id: UUID | None = None, data: PYDANTIC_TYPE | MODEL_TYPE | None = None
-    ) -> MODEL_TYPE | None:
+    async def update(self, id: UUID | None = None, data: PYDANTIC_TYPE | MODEL_TYPE | None = None) -> MODEL_TYPE | None:
         """
         Update record.
         Can accept either a Pydantic schema or an already updated model instance.
         If model instance is provided, id parameter is ignored.
         """
         if data is None:
-            raise ValueError("Data must be provided")
+            raise ValueError('Data must be provided')
 
         if type(data) is self.model:
             # If we already have a model instance, just update it
@@ -138,10 +132,10 @@ class SQLAlchemyRepository(AbstractRepository[MODEL_TYPE]):
         records = result.scalars().all()
 
         return {
-            "total": total,
-            "page": skip // limit + 1,
-            "limit": limit,
-            "items": list(records),
+            'total': total,
+            'page': skip // limit + 1,
+            'limit': limit,
+            'items': list(records),
         }
 
     def add_object(self, obj: MODEL_TYPE) -> None:
@@ -156,9 +150,7 @@ class SQLAlchemyRepository(AbstractRepository[MODEL_TYPE]):
         """Commit the current transaction"""
         await self._session.commit()
 
-    async def refresh(
-        self, obj: MODEL_TYPE, attribute_names: list[str] | None = None
-    ) -> None:
+    async def refresh(self, obj: MODEL_TYPE, attribute_names: list[str] | None = None) -> None:
         """Refresh an object from the database, optionally loading specific relationships"""
         await self._session.refresh(obj, attribute_names)
 

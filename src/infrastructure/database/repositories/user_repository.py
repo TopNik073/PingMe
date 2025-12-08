@@ -18,11 +18,11 @@ class UserRepository(SQLAlchemyRepository[Users]):
         user = await self.get_by_id(user_id)
         if not user:
             return None
-        
+
         user.is_online = is_online
         await self.flush()
         await self.refresh(user)
-        
+
         return user
 
     async def update_last_seen(self, user_id: UUID, last_seen: datetime | None = None) -> Users | None:
@@ -30,36 +30,33 @@ class UserRepository(SQLAlchemyRepository[Users]):
         user = await self.get_by_id(user_id)
         if not user:
             return None
-        
+
         if last_seen is None:
             last_seen = get_datetime_UTC()
-        
+
         user.last_seen = last_seen
         await self.flush()
         await self.refresh(user)
-        
+
         return user
 
     async def update_online_status_and_last_seen(
-        self, 
-        user_id: UUID, 
-        is_online: bool,
-        last_seen: datetime | None = None
+        self, user_id: UUID, is_online: bool, last_seen: datetime | None = None
     ) -> Users | None:
         """Update both online status and last seen in one operation"""
         user = await self.get_by_id(user_id)
         if not user:
             return None
-        
+
         user.is_online = is_online
-        
+
         if last_seen is None:
             last_seen = get_datetime_UTC()
-        
+
         user.last_seen = last_seen
         await self.flush()
         await self.refresh(user)
-        
+
         return user
 
     async def search_users(
@@ -73,12 +70,13 @@ class UserRepository(SQLAlchemyRepository[Users]):
         Uses case-insensitive ILIKE for pattern matching.
         """
         # Prepare search pattern (add % for wildcard matching)
-        search_pattern = f"%{search_query}%"
-        
+        search_pattern = f'%{search_query}%'
+
         query = (
             select(self.model)
             .where(
                 or_(
+                    self.model.email.ilike(search_pattern),
                     self.model.name.ilike(search_pattern),
                     self.model.username.ilike(search_pattern),
                     self.model.phone_number.ilike(search_pattern),
@@ -89,8 +87,8 @@ class UserRepository(SQLAlchemyRepository[Users]):
             .offset(skip)
             .limit(limit)
         )
-        
+
         result = await self._session.execute(query)
         users = result.scalars().all()
-        
+
         return list(users) if users else []

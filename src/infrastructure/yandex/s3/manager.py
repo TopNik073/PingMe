@@ -18,23 +18,19 @@ class S3Manager:
     def __init__(self):
         self.bucket = settings.S3_BUCKET
         self.s3_client = boto3.client(
-            "s3",
+            's3',
             endpoint_url=settings.S3_ENDPOINT,
             region_name=settings.S3_REGION,
             aws_access_key_id=settings.S3_ACCESS_KEY,
-            aws_secret_access_key=settings.S3_SECRET_KEY.get_secret_value()
+            aws_secret_access_key=settings.S3_SECRET_KEY.get_secret_value(),
         )
 
     async def upload_file(
-        self, 
-        file: UploadFile | BinaryIO, 
-        file_path: str, 
-        content_type: str | None = None,
-        public_read: bool = False
+        self, file: UploadFile | BinaryIO, file_path: str, content_type: str | None = None, public_read: bool = False
     ) -> dict | None:
         """
         Загружает файл в S3 хранилище (async)
-        
+
         Args:
             file: Файл для загрузки
             file_path: Путь к файлу в бакете
@@ -45,7 +41,7 @@ class S3Manager:
         try:
             with tempfile.NamedTemporaryFile(delete=False) as temp_file:
                 temp_file_path = temp_file.name
-                
+
                 if isinstance(file, UploadFile):
                     content = await file.read()
                     temp_file.write(content)
@@ -59,13 +55,13 @@ class S3Manager:
                 extra_args['ContentType'] = content_type
             if public_read:
                 extra_args['ACL'] = 'public-read'
-            
+
             await asyncio.to_thread(
                 self.s3_client.upload_file,
                 temp_file_path,
                 self.bucket,
                 file_path,
-                ExtraArgs=extra_args if extra_args else {}
+                ExtraArgs=extra_args if extra_args else {},
             )
 
             size = Path(temp_file_path).stat().st_size
@@ -73,25 +69,23 @@ class S3Manager:
             Path(temp_file_path).unlink()
             temp_file_path = None
 
-            file_url = f"{settings.S3_ENDPOINT}/{self.bucket}/{file_path}"
+            file_url = f'{settings.S3_ENDPOINT}/{self.bucket}/{file_path}'
             return {
-                "name": file_path.split('/')[-1],
-                "url": file_url,
-                "path": file_path,
-                "size": size,
-                "mime_type": content_type,
-                "uploaded_at": datetime.now().isoformat()
+                'name': file_path.split('/')[-1],
+                'url': file_url,
+                'path': file_path,
+                'size': size,
+                'mime_type': content_type,
+                'uploaded_at': datetime.now().isoformat(),
             }
         except Exception as e:
-            logger.exception("Error uploading file to S3: %s", e)
+            logger.exception('Error uploading file to S3: %s', e)
             if temp_file_path and Path(temp_file_path).exists():
                 with suppress(Exception):
                     Path(temp_file_path).unlink()
             return None
 
-    async def upload_files(
-        self, files: list[UploadFile | BinaryIO], base_path: str
-    ) -> list[dict]:
+    async def upload_files(self, files: list[UploadFile | BinaryIO], base_path: str) -> list[dict]:
         """
         Загружает несколько файлов в S3 (async)
         """
@@ -99,16 +93,16 @@ class S3Manager:
         for file in files:
             filename = None
             content_type = None
-            
+
             if isinstance(file, UploadFile):
                 filename = file.filename
                 content_type = file.content_type
             elif hasattr(file, 'filename'):
                 filename = file.filename
                 content_type = getattr(file, 'content_type', None)
-            
+
             if filename:
-                file_path = f"{base_path}/{filename}"
+                file_path = f'{base_path}/{filename}'
                 result = await self.upload_file(file, file_path, content_type)
                 if result:
                     uploaded_files.append(result)
@@ -129,15 +123,12 @@ class S3Manager:
             url = await asyncio.to_thread(
                 self.s3_client.generate_presigned_url,
                 'get_object',
-                Params={
-                    'Bucket': self.bucket,
-                    'Key': file_path
-                },
-                ExpiresIn=expires_in
+                Params={'Bucket': self.bucket, 'Key': file_path},
+                ExpiresIn=expires_in,
             )
             return url  # noqa: RET504
         except Exception as e:
-            logger.exception("Error generating presigned URL: %s", e)
+            logger.exception('Error generating presigned URL: %s', e)
             return None
 
     async def delete_file(self, file_path: str) -> bool:
@@ -151,14 +142,10 @@ class S3Manager:
             True если удаление успешно, False при ошибке
         """
         try:
-            await asyncio.to_thread(
-                self.s3_client.delete_object,
-                Bucket=self.bucket,
-                Key=file_path
-            )
+            await asyncio.to_thread(self.s3_client.delete_object, Bucket=self.bucket, Key=file_path)
             return True
         except Exception as e:
-            logger.exception("Error deleting file from S3: %s", e)
+            logger.exception('Error deleting file from S3: %s', e)
             return False
 
     async def delete_files(self, file_paths: list[str]) -> bool:
@@ -173,14 +160,10 @@ class S3Manager:
         """
         try:
             objects = [{'Key': path} for path in file_paths]
-            await asyncio.to_thread(
-                self.s3_client.delete_objects,
-                Bucket=self.bucket,
-                Delete={'Objects': objects}
-            )
+            await asyncio.to_thread(self.s3_client.delete_objects, Bucket=self.bucket, Delete={'Objects': objects})
             return True
         except Exception as e:
-            logger.exception("Error deleting files from S3: %s", e)
+            logger.exception('Error deleting files from S3: %s', e)
             return False
 
     async def download_file(self, file_path: str) -> tuple[bytes, str, int] | None:
@@ -194,20 +177,16 @@ class S3Manager:
             Кортеж (file_content: bytes, content_type: str, size: int) или None при ошибке
         """
         try:
-            response = await asyncio.to_thread(
-                self.s3_client.get_object,
-                Bucket=self.bucket,
-                Key=file_path
-            )
-            
+            response = await asyncio.to_thread(self.s3_client.get_object, Bucket=self.bucket, Key=file_path)
+
             file_content = response['Body'].read()
-            
+
             content_type = response.get('ContentType', 'application/octet-stream')
             size = response.get('ContentLength', len(file_content))
-            
+
             return file_content, content_type, size
         except Exception as e:
-            logger.exception("Error downloading file from S3: %s", e)
+            logger.exception('Error downloading file from S3: %s', e)
             return None
 
     async def create_folder(self, conversation_id: UUID) -> bool:
@@ -221,15 +200,10 @@ class S3Manager:
             True если создание успешно, False при ошибке
         """
         try:
-            folder_path = f"{conversation_id}/"
-            await asyncio.to_thread(
-                self.s3_client.put_object,
-                Bucket=self.bucket,
-                Key=folder_path,
-                Body=b''
-            )
-            logger.info("Created S3 folder for conversation %s", conversation_id)
+            folder_path = f'{conversation_id}/'
+            await asyncio.to_thread(self.s3_client.put_object, Bucket=self.bucket, Key=folder_path, Body=b'')
+            logger.info('Created S3 folder for conversation %s', conversation_id)
             return True
         except Exception as e:
-            logger.exception("Error creating S3 folder for conversation %s: %s", conversation_id, e)
+            logger.exception('Error creating S3 folder for conversation %s: %s', conversation_id, e)
             return False
