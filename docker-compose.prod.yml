@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    image: ghcr.io/TopNik073/pingme:${IMAGE_TAG:-latest}
+    image: ghcr.io/topnik073/pingme:${IMAGE_TAG:-latest}
     container_name: pingme-app
     restart: unless-stopped
     environment:

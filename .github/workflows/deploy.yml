@@ -12,7 +12,7 @@ env:
   IMAGE_TAG: ${{ github.sha }}
   REGISTRY: ghcr.io
   REPOSITORY_NAME: pingme
-  IMAGE_NAME: TopNik073/pingme
+  IMAGE_NAME: topnik073/pingme
 
 jobs:
   build:
