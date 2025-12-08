@@ -77,8 +77,11 @@ def mask_sensitive_data(  # noqa
                 # Try to parse JSON strings
                 elif isinstance(value, str):
                     stripped = value.strip()
-                    if (stripped.startswith('{') and stripped.endswith('}')) or (
-                        stripped.startswith('[') and stripped.endswith(']')
+                    if any(
+                        (
+                            stripped.startswith('{') and stripped.endswith('}'),
+                            stripped.startswith('[') and stripped.endswith(']'),
+                        )
                     ):
                         try:
                             parsed = json.loads(value)
