@@ -1,6 +1,7 @@
 from io import BytesIO
 from uuid import UUID, uuid4
 from fastapi import UploadFile
+from sqlalchemy.exc import IntegrityError
 
 from src.infrastructure.database.repositories.user_repository import UserRepository
 from src.infrastructure.database.repositories.media_repository import MediaRepository
@@ -57,6 +58,10 @@ class UserService:
                 user.avatar_url = None
 
             return user
+        except IntegrityError as e:
+            logger.warning('Failed to update user profile due to integrity error: %s', e)
+            raise ValueError('This phone number already using') from e
+
         except Exception as e:
             logger.exception('Failed to update user: %s', e)
             raise
