@@ -20,6 +20,8 @@ ALLOWED_CONTENT_TYPES = {
     'image/png',
     'image/gif',
     'image/webp',
+    'image/heic',
+    'image/heif',
     # Videos
     'video/mp4',
     'video/webm',
