@@ -87,8 +87,8 @@ class ConversationService:
         """
         Create a new conversation and add creator as OWNER.
         Conversation type is automatically determined based on participant count:
-        - 2 participants = DIALOG
-        - 3+ participants = POLYLOGUE
+        - 2 participants = DIALOG (creator: OWNER, second participant: ADMIN)
+        - 3+ participants = POLYLOGUE (creator: OWNER, others: MEMBER)
         """
         try:
             # Create conversation with temporary type (will be updated after adding participants)
@@ -128,8 +128,24 @@ class ConversationService:
 
             # Auto-determine conversation type based on participant count
             participants = await self._conversation_repo.get_participants(conversation.id)
-            if len(participants) == DIALOG_PARTICIPANT_COUNT:
+            participant_count = len(participants)
+            
+            if participant_count == DIALOG_PARTICIPANT_COUNT:
                 conversation.conversation_type = ConversationType.DIALOG
+                # For dialogs: second participant should be ADMIN
+                # Find the participant who is not the creator
+                for participant in participants:
+                    if participant.user_id != user_id:
+                        # Update second participant's role to ADMIN
+                        await self._conversation_repo.update_participant_role(
+                            participant.user_id, conversation.id, Roles.ADMIN
+                        )
+                        logger.info(
+                            'Dialog created: participant %s assigned ADMIN role in conversation %s',
+                            participant.user_id,
+                            conversation.id,
+                        )
+                        break
             else:
                 conversation.conversation_type = ConversationType.POLYLOGUE
 
@@ -366,15 +382,19 @@ class ConversationService:
             if not is_participant:
                 raise ValueError('User is not a participant of this conversation')
 
-            # Check user role - only OWNER can delete
-            user_role = await self._conversation_repo.get_user_role(user_id, conversation_id)
-            if user_role != Roles.OWNER:
-                raise ValueError('Only OWNER can delete conversation')
-
-            # Get conversation
+            # Get conversation to check type
             conversation = await self._conversation_repo.get_by_id(conversation_id)
             if not conversation:
                 raise ValueError('Conversation not found')
+
+            # Check user role
+            user_role = await self._conversation_repo.get_user_role(user_id, conversation_id)
+            
+            # For dialogs: OWNER or ADMIN can delete
+            # For polylogues: only OWNER can delete
+            if conversation.conversation_type == ConversationType.POLYLOGUE:
+                if user_role != Roles.OWNER:
+                    raise ValueError('Only OWNER can delete conversation')
 
             if conversation.is_deleted:
                 raise ValueError('Conversation is already deleted')
