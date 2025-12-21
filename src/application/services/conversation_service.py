@@ -392,9 +392,13 @@ class ConversationService:
             
             # For dialogs: OWNER or ADMIN can delete
             # For polylogues: only OWNER can delete
-            if conversation.conversation_type == ConversationType.POLYLOGUE:
-                if user_role != Roles.OWNER:
-                    raise ValueError('Only OWNER can delete conversation')
+            if all(
+                    [
+                        conversation.conversation_type == ConversationType.POLYLOGUE,
+                        user_role != Roles.OWNER
+                    ]
+            ):
+                raise ValueError('Only OWNER can delete conversation')
 
             if conversation.is_deleted:
                 raise ValueError('Conversation is already deleted')
