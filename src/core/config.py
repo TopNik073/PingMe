@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     APP_HOST: str = '127.0.0.1'
     APP_PORT: int = 8000
     APP_NAME: str = 'PingMe'
+    APP_VERSION: str = 'unknown'
     DEBUG: bool = False
 
     CORS_ORIGINS: list[str] = ['*']

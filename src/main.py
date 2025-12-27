@@ -46,7 +46,12 @@ async def lifespan(app: FastAPI):
     logger.info('Application shutdown complete')
 
 
-app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG, lifespan=lifespan)
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    debug=settings.DEBUG,
+    lifespan=lifespan
+)
 
 
 # CORS middleware

@@ -19,6 +19,9 @@ RUN uv sync --locked --no-install-project --verbose --no-progress
 
 FROM base AS final
 
+ARG APP_VERSION=unknown
+ENV APP_VERSION=${APP_VERSION}
+
 RUN pip install --upgrade "uv>=0.6,<1.0"
 COPY --from=builder /app_dir/.venv ./.venv
 COPY src/ ./src
